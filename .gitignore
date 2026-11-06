@@ -5,3 +5,4 @@ node_modules/
 backups/
 *.zip
 web/e2e/shots/
+docker-compose.override.yml
