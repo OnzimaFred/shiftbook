@@ -20,14 +20,20 @@ if [ ! -f .env ]; then
   echo "  1) Cloudflare Tunnel (recommended: no open web ports)"
   echo "  2) My own reverse proxy (Nginx, Caddy or Traefik) on this droplet"
   read -rp "Choose 1 or 2: " MODE
-  TOKEN=""
-  if [ "$MODE" = "1" ]; then read -rp "Paste the tunnel token (Zero Trust > Networks > Tunnels): " TOKEN; fi
+  TOKEN=""; PORT=8080
+  if [ "$MODE" = "1" ]; then
+    read -rp "Paste the tunnel token (Zero Trust > Networks > Tunnels): " TOKEN
+  else
+    # pick the first free local port from 8080 up, so it doesn't clash with your other apps
+    while ss -ltn | grep -q ":$PORT "; do PORT=$((PORT + 1)); done
+    read -rp "Local port for your reverse proxy to use [$PORT]: " P; PORT=${P:-$PORT}
+  fi
   umask 077
   cat > .env <<ENV
 APP_ORIGIN=$ORIGIN
 DB_OWNER_PASSWORD=$(openssl rand -hex 24)
 API_DB_PASSWORD=$(openssl rand -hex 24)
-APP_PORT=8080
+APP_PORT=$PORT
 CLOUDFLARE_TUNNEL_TOKEN=$TOKEN
 ENV
   echo "Saved .env with new database passwords. Keep a copy somewhere safe."
