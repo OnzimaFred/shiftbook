@@ -1,0 +1,1079 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>html{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Shiftbook</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: app shell — slim left rail of views, working canvas on the right; rail becomes a top tab strip on phones. Time is the hero: condensed clock digits and a day-ribbon timesheet on a 06:00–21:00 scale. */
+:root{
+  --paper:#EEF1F3; --surface:#FFFFFF; --ink:#16212B; --muted:#5B6874; --line:#D6DDE3;
+  --accent:#0E6E68; --accent-soft:#D7ECEA; --accent-ink:#FFFFFF;
+  --ok:#2F7D3A; --ok-soft:#DDEFDF; --warn:#9A6200; --warn-soft:#F7EBD2;
+  --bad:#B4322B; --bad-soft:#F6DEDC; --info:#2D5DA8; --info-soft:#DDE7F6;
+  --ot:#C2780E;
+  --display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#11181E; --surface:#18222A; --ink:#E6ECF0; --muted:#97A4AF; --line:#2A3741;
+  --accent:#3FB8AE; --accent-soft:#163A38; --accent-ink:#06201E;
+  --ok:#6CC77A; --ok-soft:#1A3320; --warn:#E3AC4A; --warn-soft:#3A2C12;
+  --bad:#EE7F77; --bad-soft:#3D1D1B; --info:#7FA8EC; --info-soft:#1B2A42; --ot:#E9A445;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#11181E; --surface:#18222A; --ink:#E6ECF0; --muted:#97A4AF; --line:#2A3741;
+  --accent:#3FB8AE; --accent-soft:#163A38; --accent-ink:#06201E;
+  --ok:#6CC77A; --ok-soft:#1A3320; --warn:#E3AC4A; --warn-soft:#3A2C12;
+  --bad:#EE7F77; --bad-soft:#3D1D1B; --info:#7FA8EC; --info-soft:#1B2A42; --ot:#E9A445;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 var(--body);font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.shell{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:100vh}
+.rail{background:var(--surface);border-right:1px solid var(--line);padding:24px 14px;display:flex;flex-direction:column;gap:24px;position:sticky;top:0;height:100vh}
+.brand{font-family:var(--display);font-stretch:75%;font-weight:800;font-size:26px;letter-spacing:.01em;padding:0 10px;line-height:1}
+.brand small{display:block;font-family:var(--body);font-weight:500;font-size:12px;color:var(--muted);letter-spacing:0;margin-top:6px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;border-radius:8px;color:var(--muted);text-decoration:none;font-weight:600}
+.nav a:hover{background:var(--paper);color:var(--ink)}
+.nav a[aria-current="page"]{background:var(--accent-soft);color:var(--ink)}
+.badge{background:var(--accent);color:var(--accent-ink);font-size:12px;border-radius:99px;padding:0 7px;min-width:20px;text-align:center}
+.role{margin-top:auto;display:flex;flex-direction:column;gap:6px;padding:0 4px}
+.role label{font-size:12px;color:var(--muted)}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--paper);border-radius:9px;padding:3px}
+.seg button{border:0;background:none;padding:6px;border-radius:7px;cursor:pointer;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg.plants{display:inline-grid;grid-template-columns:repeat(3,auto);max-width:100%}
+.seg.plants button{padding:6px 14px;white-space:nowrap}
+.plantsec{display:flex;flex-direction:column;gap:12px}
+.plantsec .head{align-items:baseline}
+.sched{position:absolute;top:1px;bottom:1px;border:1.5px dashed color-mix(in srgb,var(--muted) 70%,transparent);border-radius:6px}
+.tag{display:inline-block;font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:0 6px}
+.groupttl{font-size:13px;font-weight:700;color:var(--muted);margin:4px 0 -4px}
+/* Roster grid */
+.roster{border-collapse:separate;border-spacing:3px;min-width:720px;font-size:13px}
+.roster th,.roster td{border:0;padding:0;text-align:center}
+.roster th{font-weight:600;color:var(--muted);padding:4px 0;font-size:12px;line-height:1.2}
+.roster th.today{color:var(--accent)}
+.roster td.nm{text-align:left;padding:4px 10px 4px 0;white-space:nowrap}
+.roster td.nm small{color:var(--muted)}
+.roster .rolehd td{text-align:left;font-weight:700;color:var(--muted);padding:10px 0 2px;font-size:12px}
+.cell{height:28px;min-width:30px;border-radius:5px;background:var(--paper);display:grid;place-items:center;font-weight:700;font-size:12px}
+.cell.on{background:var(--accent);color:var(--accent-ink)}
+.cell.lv{background:var(--info);color:var(--surface)}
+.cell.pend{background:repeating-linear-gradient(45deg,var(--warn-soft) 0 5px,var(--surface) 5px 10px);color:var(--warn);border:1px solid var(--warn)}
+.cell.today{box-shadow:inset 0 0 0 2px var(--ink)}
+.cell.night{background:var(--ink);color:var(--surface)}
+.cell.gen{background:var(--accent-soft);color:var(--accent)}
+.cell.rel{background:var(--surface);color:var(--muted);border:1px dashed var(--muted)}
+.cell.cov{background:var(--ot);color:#fff}
+.cov .cell.c1{background:var(--warn-soft);color:var(--warn)}
+.cov .cell.c2{color:var(--ok)}
+.crewbox{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.crewbox.bad{border-color:var(--bad)}
+.crewbox h3{margin:0;font-size:14px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.crewpair{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.person.gap{border-style:dashed;border-color:var(--bad);color:var(--bad)}
+.person .tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tag.head{color:var(--accent);border-color:var(--accent)}
+.tag.covr{color:var(--ot);border-color:var(--ot)}
+.gaprow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line)}
+.gaprow:first-of-type{border-top:0}
+.gaprow select{width:auto;min-width:200px}
+.person .sick{margin-left:auto;flex:none}
+.cell.on.today,.cell.night.today,.cell.lv.today{box-shadow:inset 0 0 0 2px var(--surface),0 0 0 2px var(--ink)}
+.roster th.we{background:var(--paper);border-radius:5px}
+.roster th.ph{background:var(--info-soft);color:var(--info);border-radius:5px}
+.roster td.tot{font-weight:700;padding-left:8px;text-align:right}
+.roster select{width:auto;padding:1px 4px;font-size:12px;border-radius:5px;margin-left:4px}
+.monthbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.monthbar .mnav{display:flex;align-items:center;gap:8px}
+.monthbar .mlabel{font-family:var(--display);font-stretch:75%;font-weight:750;font-size:22px;min-width:170px;text-align:center}
+.settings{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end}
+.settings .field{max-width:240px}
+.strip{display:flex;gap:6px;flex-wrap:wrap}
+.strip div{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;color:var(--muted)}
+.strip .cell{width:38px}
+.cov td.nm{font-weight:600}
+.cov .cell{background:none;font-size:14px}
+.cov .cell.c0{background:var(--bad-soft);color:var(--bad)}
+.cov .cell.c1{background:var(--warn-soft);color:var(--warn)}
+.seg.roles{grid-template-columns:repeat(3,1fr)}
+.seg.roles button{padding:6px 2px;font-size:13px}
+/* Duty schedule document */
+.doc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.dochead{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-end}
+.dochead .plant{font-family:var(--display);font-stretch:70%;font-weight:800;font-size:26px;line-height:1;letter-spacing:.02em}
+.dochead .ttl{font-weight:700;font-size:14px;margin-top:4px}
+.dochead .meta{font-size:12.5px;color:var(--muted);text-align:right}
+.duty{border-collapse:collapse;font-size:12px;min-width:1180px}
+.duty th,.duty td{border:1px solid var(--line);padding:0;text-align:center;white-space:nowrap}
+.duty thead th{background:var(--paper);font-weight:600;padding:3px 4px;font-size:11.5px}
+.duty thead th.mon{background:var(--ink);color:var(--surface);font-size:12px}
+.duty thead th.wk{font-size:11px;letter-spacing:.04em}
+.duty thead th.we{background:color-mix(in srgb,var(--paper) 60%,var(--line))}
+.duty thead th.ph{background:var(--info-soft);color:var(--info)}
+.duty thead th.tdy{box-shadow:inset 0 -3px 0 var(--accent)}
+.duty td.l{text-align:left;padding:4px 6px}
+.duty td.n{padding:4px 6px;font-weight:600}
+.duty tr.sec td{background:var(--paper);font-weight:700;text-align:left;padding:5px 8px;font-size:12px}
+.duty td.sum{padding:4px 6px;font-weight:600;min-width:38px}
+.duty td.sum.ot{color:var(--ot)}
+.rc{min-width:34px;height:26px;display:grid;place-items:center;font-weight:700;font-size:10.5px;line-height:1.05;color:#1d2430;user-select:none}
+.rc small{display:block;font-size:8.5px;font-weight:700}
+.rc.c-dp{background:#9DB4E8}.rc.c-np{background:#CFE0F5}.rc.c-nw{background:#B9D7C9}.rc.c-d{background:#C9B8E4}
+.rc.c-off{background:#FFCD6B}.rc.c-otd{background:#E35BD3;color:#fff}.rc.c-otn{background:#3FD3E3}
+.rc.c-al{background:#7FC48A}.rc.c-sl{background:#F0A39C}.rc.c-cl{background:#A8D9A0}.rc.c-mp{background:#F6C2E4}.rc.c-ul{background:#D5D9DE}.rc.c-blank{background:transparent}
+.rc.ov{box-shadow:inset 0 0 0 2px rgba(29,36,48,.55)}
+.rc.err{outline:2px solid var(--bad);outline-offset:-2px}
+.editing .rc,.editing .cell[data-p]{cursor:crosshair}
+.palette{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.palette button{border:1px solid var(--line);border-radius:7px;padding:0;background:none;cursor:pointer}
+.palette button .rc{min-width:52px;height:30px;border-radius:6px;font-size:11px}
+.palette button[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:1px}
+.statusbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.hourtbl{border-collapse:collapse;font-size:12.5px;min-width:0}
+.hourtbl th,.hourtbl td{border:1px dashed var(--line);padding:4px 10px;text-align:left}
+.hourtbl th{background:var(--ink);color:var(--surface);font-weight:600}
+.daysum{min-width:1100px}
+.daysum td.bad{background:var(--bad-soft);color:var(--bad)}
+.daysum td.warn{background:var(--warn-soft);color:var(--warn)}
+.daysum tr.tot td{font-weight:800;background:var(--paper)}
+.checks li{margin:2px 0}
+.who{font-size:13px;color:var(--muted);padding:0 4px}
+.who b{color:var(--ink);display:block}
+
+main{padding-block:32px 64px;padding-left:max(32px,env(safe-area-inset-left,0px));padding-right:max(32px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:28px;max-width:1120px;width:100%}
+h1{font-family:var(--display);font-stretch:80%;font-weight:750;font-size:34px;line-height:1.1;margin:0;text-wrap:balance}
+h2{font-size:16px;margin:0;font-weight:700}
+.sub{color:var(--muted);margin:4px 0 0}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;min-width:0}
+.panel>h2{margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:20px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+
+/* Clock hero */
+.clock{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px 28px}
+.digits{font-family:var(--display);font-stretch:62%;font-weight:800;font-size:clamp(64px,11vw,112px);line-height:.9;letter-spacing:-.01em}
+.digits .sec{color:var(--muted);font-weight:500;font-size:.42em;margin-left:6px}
+.clockmeta{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--muted)}
+.clockmeta strong{color:var(--ink)}
+.punch{border:0;cursor:pointer;border-radius:50%;width:150px;height:150px;font-family:var(--display);font-stretch:75%;font-weight:750;font-size:22px;line-height:1.1;background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 8px var(--accent-soft);transition:transform .12s}
+.punch:active{transform:scale(.97)}
+.punch.out{background:var(--ink);color:var(--surface);box-shadow:0 0 0 8px var(--line)}
+.punch span{display:block;font-family:var(--body);font-weight:500;font-size:12px;margin-top:4px;opacity:.8}
+
+/* Meters */
+.meter{display:flex;flex-direction:column;gap:6px}
+.meter .row{display:flex;justify-content:space-between;font-size:14px}
+.meter .row b{font-weight:700}
+.bar{height:8px;background:var(--paper);border-radius:99px;overflow:hidden;display:flex}
+.bar i{display:block;height:100%;background:var(--accent)}
+.bar i.ot{background:var(--ot)}
+.stack{display:flex;flex-direction:column;gap:16px}
+
+/* Ribbon timesheet */
+.ribbon{display:grid;grid-template-columns:92px minmax(0,1fr) 70px 64px;align-items:center;gap:6px 14px}
+.ribbon .scale{grid-column:2;position:relative;height:18px;font-size:11px;color:var(--muted)}
+.ribbon .scale span{position:absolute;transform:translateX(-50%)}
+.ribbon .hd{font-size:12px;color:var(--muted);font-weight:600}
+.day{font-weight:600;font-size:14px;line-height:1.2}
+.day small{display:block;color:var(--muted);font-weight:400}
+.track{position:relative;height:26px;background:var(--paper);border-radius:6px;background-image:repeating-linear-gradient(90deg,transparent 0,transparent calc(100%/15 - 1px),var(--line) calc(100%/15 - 1px),var(--line) calc(100%/15))}
+.span{position:absolute;top:4px;bottom:4px;border-radius:4px;background:var(--accent)}
+.span.otpart{background:var(--ot)}
+.span.live{background:repeating-linear-gradient(45deg,var(--accent) 0 6px,color-mix(in srgb,var(--accent) 70%,var(--surface)) 6px 12px)}
+.std{position:absolute;top:0;bottom:0;width:2px;background:var(--bad);opacity:.55}
+.num{text-align:right;font-weight:600;font-size:14px}
+.num.ot{color:var(--ot)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--muted);margin-top:14px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px}
+
+/* Pills & tables */
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;border-radius:99px;padding:2px 10px;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.p-ok{background:var(--ok-soft);color:var(--ok)}
+.p-warn{background:var(--warn-soft);color:var(--warn)}
+.p-bad{background:var(--bad-soft);color:var(--bad)}
+.p-info{background:var(--info-soft);color:var(--info)}
+.p-mute{background:var(--paper);color:var(--muted)}
+.tablewrap{overflow-x:auto;margin:0 -20px;padding:0 20px}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
+th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td .note{color:var(--muted);font-size:13px}
+.empty{color:var(--muted);padding:18px 0;text-align:center}
+
+/* Forms */
+form{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field.full{grid-column:1/-1}
+.field label{font-size:13px;font-weight:600}
+input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%}
+textarea{resize:vertical;min-height:70px}
+.hint{font-size:13px;color:var(--muted)}
+.err{font-size:13px;color:var(--bad);grid-column:1/-1}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.sm{padding:5px 11px;font-size:13px}
+.btn.danger{color:var(--bad)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+form .actions{grid-column:1/-1;align-items:center;justify-content:space-between}
+
+/* Balances */
+.bal{display:flex;flex-direction:column;gap:2px}
+.bal .big{font-family:var(--display);font-stretch:70%;font-weight:750;font-size:44px;line-height:1}
+.bal .big small{font-size:16px;font-family:var(--body);font-weight:500;color:var(--muted);margin-left:4px}
+.bal .lbl{font-weight:600}
+.bal .hint{margin-bottom:8px}
+
+/* Team board */
+.board{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.person{display:flex;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;background:var(--paper);color:var(--muted);flex:none}
+.person .meta{min-width:0;display:flex;flex-direction:column;gap:3px}
+.person .meta b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.person .meta span.t{font-size:12.5px;color:var(--muted)}
+.counts{display:flex;flex-wrap:wrap;gap:10px 28px}
+.counts div{display:flex;flex-direction:column}
+.counts b{font-family:var(--display);font-stretch:70%;font-size:34px;line-height:1}
+.counts span{font-size:13px;color:var(--muted)}
+
+.example{font-size:12.5px;color:var(--muted);background:var(--paper);border:1px dashed var(--line);border-radius:8px;padding:6px 10px}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:10px;font-weight:600;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:20;max-width:calc(100% - 32px)}
+
+@media (max-width:900px){
+  .grid2,.grid3{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:760px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+  .rail{position:sticky;top:env(safe-area-inset-top,0px);height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px;padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-right:0;border-bottom:1px solid var(--line);z-index:5}
+  .brand{padding:0;font-size:22px}.brand small{display:none}
+  .role{margin:0 0 0 auto;padding:0}.role label,.who{display:none}
+  .nav{order:3;flex-direction:row;width:100%;overflow-x:auto;gap:4px;margin:0 -4px}
+  .nav a{white-space:nowrap;gap:8px}
+  main{padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));gap:20px}
+  .clock{grid-template-columns:minmax(0,1fr);padding:20px}
+  .punch{width:100%;height:auto;border-radius:12px;padding:16px;box-shadow:none}
+  form{grid-template-columns:minmax(0,1fr)}
+  .ribbon{grid-template-columns:62px minmax(0,1fr) 54px;gap:6px 10px}
+  .ribbon .col-ot{display:none}
+  h1{font-size:28px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="shell">
+  <aside class="rail">
+    <div class="brand">Shiftbook<small>Nyamwamba 1 &amp; 2 HPP</small></div>
+    <nav class="nav" id="nav" aria-label="Views"></nav>
+    <div class="role">
+      <label for="roleStaff">Viewing as</label>
+      <div class="seg roles" role="group" aria-label="Role">
+        <button id="roleStaff" aria-pressed="true" data-role="staff">Staff</button>
+        <button id="rolePt2" aria-pressed="false" data-role="pt2">PT II</button>
+        <button id="roleMgr" aria-pressed="false" data-role="manager">Manager</button>
+      </div>
+    </div>
+    <div class="who" id="who"></div>
+  </aside>
+  <main id="view"></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- Dates ---------- */
+const DAY=864e5;
+const dayStart=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x};
+const now0=new Date(), today=dayStart(now0);
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const mondayOf=d=>addDays(dayStart(d),-((d.getDay()+6)%7));
+const monday=mondayOf(today);
+const iso=d=>{const x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0")};
+const parse=s=>{const[a,b,c]=s.split("-").map(Number);return new Date(a,b-1,c)};
+const fmtD=d=>d.toLocaleDateString(undefined,{day:"numeric",month:"short"});
+const fmtDW=d=>d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"});
+const hm=m=>{m=((Math.round(m)%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")};
+const hrs=h=>{const v=(Math.round(h*100)/100).toFixed(2);return v.replace(/0+$/,"").replace(/\.$/,"")};
+const H=m=>hrs(m/60)+"h";
+const dur=m=>Math.floor(m/60)+"h "+String(Math.round(m%60)).padStart(2,"0")+"m";
+const isWeekend=d=>d.getDay()===0||d.getDay()===6;
+const nowMin=()=>{const n=new Date();return n.getHours()*60+n.getMinutes()+n.getSeconds()/60};
+const range=(a,b)=>{const out=[];for(let d=new Date(a);d<=b;d=addDays(d,1))out.push(d);return out};
+const daysBetween=(a,b)=>Math.round((dayStart(b)-dayStart(a))/DAY);
+const week=m=>range(m,addDays(m,6));
+const monthStart=d=>new Date(d.getFullYear(),d.getMonth(),1);
+const monthDaysOf=m=>range(m,new Date(m.getFullYear(),m.getMonth()+1,0));
+const monthKey=m=>iso(m).slice(0,7);
+const monthName=m=>m.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+
+/* ---------- Sites, shifts and rules ---------- */
+const PLANTS={n1:"Nyamwamba 1 HPP",n2:"Nyamwamba 2 HPP"};
+const DOC_NAME={n1:"NYAMWAMBA 1 SHPP",n2:"NYAMWAMBA 2 SHPP"};
+const DUTY={
+  G:{name:"Day, general",short:"General",start:8*60,end:17*60,paid:8*60},
+  D:{name:"Day shift",short:"Day",start:7*60,end:19*60,paid:12*60},
+  N:{name:"Night shift",short:"Night",start:19*60,end:31*60,paid:12*60}
+};
+const SHIFT_HOURS={
+  A:{from:"07:00",to:"19:00",days:"Mon–Sun"},
+  B:{from:"07:00",to:"19:00",days:"Mon–Sun"},
+  C:{from:"07:00",to:"19:00",days:"Mon–Sun"},
+  F:{from:"08:00",to:"17:00",days:"Mon–Fri"},
+  E:{from:"07:00",to:"16:00",days:"Mon–Sat"},
+  G:{from:"08:00",to:"17:00",days:"Mon–Fri"},
+  R:{from:"07:00",to:"19:00",days:"As rostered, relief cover"}
+};
+const toMin=s=>{const[a,b]=s.split(":").map(Number);return a*60+b};
+const WEEKLY={sft:48*60,gen:40*60};
+const OT_RATE=1.5, PH_RATE=2, GRACE=5;
+const HOLIDAYS={"2026-01-01":"New Year's Day","2026-01-15":"General elections","2026-01-16":"General elections","2026-01-26":"NRM Liberation Day","2026-02-16":"Archbishop Janani Luwum Day","2026-03-08":"International Women's Day","2026-03-20":"Eid al-Fitr","2026-04-03":"Good Friday","2026-04-06":"Easter Monday","2026-05-01":"Labour Day","2026-05-12":"Presidential inauguration","2026-05-27":"Eid al-Adha","2026-06-03":"Martyrs' Day","2026-06-09":"National Heroes' Day","2026-07-28":"Local elections","2026-10-09":"Independence Day","2026-12-25":"Christmas Day","2026-12-26":"Boxing Day",
+  "2027-01-01":"New Year's Day","2027-01-26":"NRM Liberation Day","2027-02-16":"Archbishop Janani Luwum Day","2027-03-08":"International Women's Day","2027-03-26":"Good Friday","2027-03-29":"Easter Monday","2027-05-01":"Labour Day","2027-06-03":"Martyrs' Day","2027-06-09":"National Heroes' Day","2027-10-09":"Independence Day","2027-12-25":"Christmas Day","2027-12-26":"Boxing Day"};
+const isPH=d=>!!HOLIDAYS[iso(d)];
+const CYCLE=["D","D","N","N",null,null];
+const CREW_OFFSET={A:0,B:2,C:4};
+let rotaAnchor=new Date(2026,10,4);
+const LEAVE_TYPES={annual:{name:"Annual leave",code:"A/L",allow:25},sick:{name:"Sick leave",code:"S/L",allow:10},casual:{name:"Casual leave",code:"C/L",allow:5},mp:{name:"Maternity/Paternity leave",code:"ML",allow:null},unpaid:{name:"Unpaid leave",code:"U/L",allow:null}};
+const CODES={
+  "D/P":{label:"Day shift, power house",loc:"DP",type:"D",cls:"c-dp"},
+  "N/P":{label:"Night shift, power house",loc:"NP",type:"N",cls:"c-np"},
+  "N/W":{label:"Night shift, weir",loc:"NW",type:"N",cls:"c-nw"},
+  "D":{label:"Day, general",loc:"DG",type:"G",cls:"c-d"},
+  "O.T D/P":{label:"Overtime day shift, power house",loc:"DP",type:"D",cls:"c-otd",ot:true},
+  "O.T N/P":{label:"Overtime night shift, power house",loc:"NP",type:"N",cls:"c-otn",ot:true},
+  "OFF":{label:"Off shift",loc:"OFF",type:null,cls:"c-off"},
+  "A/L":{label:"Annual leave",loc:"AL",type:null,cls:"c-al",leave:"annual"},
+  "S/L":{label:"Sick leave",loc:"SL",type:null,cls:"c-sl",leave:"sick"},
+  "C/L":{label:"Casual leave",loc:"CL",type:null,cls:"c-cl",leave:"casual"},
+  "ML":{label:"Maternity/Paternity leave",loc:"MP",type:null,cls:"c-mp",leave:"mp"},
+  "U/L":{label:"Unpaid leave",loc:"UL",type:null,cls:"c-ul",leave:"unpaid"},
+  "":{label:"Not on the schedule",loc:"NA",type:null,cls:"c-blank"}
+};
+const codeHtml=c=>c&&c.startsWith("O.T ")?`<small>O.T</small>${c.slice(4)}`:(c||"");
+
+/* ---------- Staff ---------- */
+// Plant staff are from the Nyamwamba 1 (November 2026) and Nyamwamba 2 (October 2026) duty schedules. Shared staff are example names.
+const P=(id,name,role,plant,sc,emp,real)=>({id,name,role,plant,sc,emp:emp||"",real:!!real,shift:["A","B","C","R"].includes(sc)?"sft":"gen",crew:["A","B","C","R"].includes(sc)?sc:null});
+const people=[
+  P("s1","Robert Mugisha","Plant Manager",null,"G"),
+  P("s2","Esther Kabugho","Maintenance Supervisor",null,"G"),
+  P("s3","Joan Biira","Site Admin",null,"G"),
+  P("s4","Daniel Baluku","EHS Officer",null,"G"),
+  P("a1","Ezra Kasaija","Plant Technician 2","n1","F","",1),
+  P("a0","Denis Mumbere","Plant Assistant","n1","G","",1),
+  P("a3","Moses Masereka","Plant Technician","n1","A","",1),
+  P("a6","Joseph Maate","Plant Assistant","n1","A","",1),
+  Object.assign(P("a8","Raphael Kambale","Plant Technician","n1","R","",1),{moves:[{from:"2026-11-07",plant:"n2"}]}),
+  P("a4","Brenda Biira","Plant Technician","n1","B","",1),
+  P("a7","Jevis Bwambale","Plant Assistant","n1","B","",1),
+  P("a5","Augustine Mugisa","Plant Technician","n1","C","",1),
+  P("a9","Samson Abaho","Plant Assistant","n1","C","",1),
+  P("a2","Martin Bwambale","Environment & Sanitation","n1","E","",1),
+  P("aM","Amos Kikenge","Machine Operator","n1","G","",1),
+  P("b1","Fred Onzima","Plant Technician 2","n2","F","UG016",1),
+  P("b3","Edinous Mumbere","Plant Technician","n2","A","UG021",1),
+  P("b7","Robert Bwambale","Plant Assistant","n2","A","UG060",1),
+  P("b4","Lilian Tumusiime","Plant Technician","n2","B","UG022",1),
+  P("b8","Majid Mawa","Plant Assistant","n2","B","UG062",1),
+  P("b5","Yubu Byabali","Plant Technician","n2","C","UG059",1),
+  P("b9","Adolf Ategeka","Plant Assistant","n2","C","",1),
+  P("b2","Selevest Bwambale","Environment & Sanitation","n2","E","UG063",1)
+];
+const ME="a3", MGR="s1", PT2ME="b1";
+const byId=id=>people.find(p=>p.id===id);
+// which plant someone works at on a given day (transfers take effect from their date)
+const plantOn=(id,d)=>{const p=byId(id);let k=p.plant;(p.moves||[]).forEach(mv=>{if(iso(d)>=mv.from)k=mv.plant});return k};
+const first=id=>id&&byId(id)?byId(id).name.split(" ")[0]:"someone";
+const initials=n=>n.split(" ").map(s=>s[0]).join("").slice(0,2);
+const siteOf=id=>plantOn(id,today)?PLANTS[plantOn(id,today)]:"Both plants";
+const crewTxt=id=>{const c=byId(id).crew;return c==="R"?"relief":c?"crew "+c:""};
+const shiftLabel=id=>{const p=byId(id);return p.shift==="gen"?`shift ${p.sc}, ${SHIFT_HOURS[p.sc].from}–${SHIFT_HOURS[p.sc].to} ${SHIFT_HOURS[p.sc].days}`:p.crew==="R"?"shift team, relief":`shift team, crew ${p.crew}`};
+const designation=p=>p.role==="Plant Technician 2"?"Plant Technician II":p.role==="Environment & Sanitation"?"Plant Assistant":p.role;
+
+/* ---------- Records ---------- */
+const leave=[], covers=[], ot=[];
+const overrides={};   // hand edits to the schedule: "plant|yyyy-mm" -> {personId:{day:code}}
+const rosters={};     // schedule status per plant and month
+let seq=100;
+const rk=(k,m)=>(k||"sh")+"|"+monthKey(m);
+const leaveOn=(id,d,st="approved")=>leave.find(l=>l.who===id&&l.status===st&&iso(d)>=l.from&&iso(d)<=l.to);
+const coverBy=(id,d)=>covers.find(c=>c.by===id&&c.date===iso(d));
+function getOv(id,d){const o=overrides[rk(plantOn(id,d),monthStart(d))];return o&&o[id]?o[id][d.getDate()]:undefined}
+function setOv(id,d,code){const k=rk(plantOn(id,d),monthStart(d));overrides[k]=overrides[k]||{};const o=overrides[k];o[id]=o[id]||{};if(code==null)delete o[id][d.getDate()];else o[id][d.getDate()]=code}
+function withCode(id,d,code,fn){const prev=getOv(id,d);setOv(id,d,code);const r=fn();setOv(id,d,prev);return r}
+
+/* ---------- Duty logic ---------- */
+const cyc=(crew,d)=>CYCLE[((daysBetween(rotaAnchor,d)-CREW_OFFSET[crew])%6+6)%6];
+function baseDuty(id,d){
+  const p=byId(id);
+  if(p.crew==="R") return null;
+  if(p.crew) return cyc(p.crew,d);
+  if(isPH(d)) return null;
+  if(p.sc==="E") return d.getDay()===0?null:"G";
+  return isWeekend(d)?null:"G";
+}
+const workingBase=(id,d)=>baseDuty(id,d)==="G";
+const coverCode=(id,t)=>byId(id).shift==="gen"?(t==="D"?"D/P":"N/P"):(t==="D"?"O.T D/P":"O.T N/P");
+const isCoverCode=(id,d)=>{const x=CODES[cellCode(id,d)]||{};return !!x.ot||(byId(id).shift==="gen"&&(x.type==="D"||x.type==="N"))};
+function derivedCode(id,d){
+  const c=coverBy(id,d);if(c) return coverCode(id,c.type);
+  const b=baseDuty(id,d);return b==="D"?"D/P":b==="N"?"N/P":b?"D":"OFF";
+}
+function cellCode(id,d){
+  const lv=leaveOn(id,d);if(lv) return LEAVE_TYPES[lv.type].code;
+  const o=getOv(id,d);if(o!==undefined) return o;
+  return derivedCode(id,d);
+}
+const dutyOf=(id,d)=>(CODES[cellCode(id,d)]||{}).type||null;
+const crewOn=(t,d)=>Object.keys(CREW_OFFSET).find(c=>cyc(c,d)===t);
+const isShiftDuty=t=>t==="D"||t==="N";
+const leaveDays=l=>range(parse(l.from),parse(l.to)).filter(d=>baseDuty(l.who,d)).length;
+const hoursOf=id=>{const h=SHIFT_HOURS[byId(id).sc];return {start:toMin(h.from),end:toMin(h.to)}};
+function dayPaid(id,d){
+  const c=CODES[cellCode(id,d)];if(!c||!c.type) return 0;
+  if(c.type==="G") return 8*60;
+  if(byId(id).shift==="gen") return c.type==="D"&&workingBase(id,d)?10*60:12*60;
+  return 12*60;
+}
+function phPaid(id,d){
+  const c=CODES[cellCode(id,d)];let m=0;
+  if(c&&c.type&&isPH(d)) m+=c.type==="N"?5*60:dayPaid(id,d);
+  if(c&&c.type==="N"&&isPH(addDays(d,1))) m+=7*60;
+  return m;
+}
+const plannedMonth=(id,m)=>monthDaysOf(m).reduce((s,d)=>s+dayPaid(id,d),0);
+const phMonth=(id,m)=>monthDaysOf(m).reduce((s,d)=>s+phPaid(id,d),0);
+function contractMonth(id,m){const ds=monthDaysOf(m);return byId(id).shift==="sft"?Math.round(WEEKLY.sft*ds.length/7):ds.filter(d=>baseDuty(id,d)).length*8*60}
+
+function shiftTeam(k,d,t){
+  const loc=t==="D"?"DP":"NP",crew=crewOn(t,d);
+  const on=people.filter(p=>plantOn(p.id,d)===k&&(CODES[cellCode(p.id,d)]||{}).loc===loc);
+  const tech=people.find(p=>plantOn(p.id,d)===k&&p.role==="Plant Technician"&&p.crew===crew);
+  const asst=people.find(p=>plantOn(p.id,d)===k&&p.role==="Plant Assistant"&&p.crew===crew);
+  const headP=(tech&&on.find(p=>p.id===tech.id))||on.find(p=>p.role==="Plant Technician")||on.find(p=>p.role==="Plant Technician 2");
+  const asP=(asst&&on.find(p=>p.id===asst.id))||on.find(p=>p.role==="Plant Assistant");
+  const head=headP?headP.id:null,as=asP?asP.id:null;
+  const away=x=>x&&!on.some(p=>p.id===x.id)&&(CODES[cellCode(x.id,d)]||{}).leave?x.id:null;
+  return {crew,tech:tech&&tech.id,asst:asst&&asst.id,on:on.map(p=>p.id),count:on.length,head,as,
+    headCover:head&&head!==(tech&&tech.id)&&(away(tech)||isCoverCode(head,d))?{forId:away(tech),mode:byId(head).shift==="gen"&&t==="D"&&workingBase(head,d)?"extend":"full"}:null,
+    asCover:as&&as!==(asst&&asst.id)&&(away(asst)||isCoverCode(as,d))?{forId:away(asst)}:null,
+    techAway:away(tech),asstAway:away(asst)};
+}
+function available(id,d,t,relax){
+  if(leaveOn(id,d)) return false;
+  const c=CODES[cellCode(id,d)]||{};
+  if(c.leave||c.type==="D"||c.type==="N") return false;
+  if(relax) return true;
+  if(t==="D"&&dutyOf(id,addDays(d,-1))==="N") return false;
+  if(t==="N"){const nx=dutyOf(id,addDays(d,1));if(nx==="D"||nx==="G")return false}
+  return true;
+}
+function coverCost(id,d,t){
+  const p=byId(id),mon=monthStart(d),c=contractMonth(id,mon),before=plannedMonth(id,mon);
+  const mode=p.shift==="gen"&&t==="D"&&workingBase(id,d)?"extend":"full";
+  const after=withCode(id,d,coverCode(id,t),()=>plannedMonth(id,mon));
+  return {mode,ph:isPH(d)||(t==="N"&&isPH(addDays(d,1))),ot:Math.max(0,after-c)-Math.max(0,before-c)};
+}
+function candidates(k,d,t,slot,relax){
+  const at=p=>plantOn(p.id,d)===k;
+  const pool=slot==="head"
+    ?[...people.filter(p=>at(p)&&p.role==="Plant Technician"&&p.crew==="R"),...people.filter(p=>at(p)&&p.role==="Plant Technician 2"),...people.filter(p=>at(p)&&p.role==="Plant Technician"&&p.crew!=="R")]
+    :[...people.filter(p=>at(p)&&p.role==="Plant Assistant"&&p.crew==="R"),...people.filter(p=>at(p)&&p.role==="Plant Assistant"&&!p.crew),...people.filter(p=>at(p)&&p.role==="Plant Assistant"&&p.crew&&p.crew!=="R")];
+  return pool.filter(p=>available(p.id,d,t,relax)).map(p=>({id:p.id,...coverCost(p.id,d,t)}))
+    .sort((a,b)=>a.ot-b.ot||plannedMonth(a.id,monthStart(d))-plannedMonth(b.id,monthStart(d)));
+}
+const whyTxt=id=>{const p=byId(id);return p.role==="Plant Technician 2"?"Plant Technician II":!p.crew?`${p.role.toLowerCase()}, shift ${p.sc}`:p.crew==="R"?"relief "+p.role.toLowerCase():`${p.role.toLowerCase()}, crew ${p.crew} on a day off`};
+const costTxt=(m,ph)=>(m?`+${H(m)} overtime`:"no overtime")+(ph?", public-holiday rate":"");
+const howTxt=(id,mode)=>mode==="extend"?"stays on to 19:00":whyTxt(id);
+function bookCover(k,d,t,slot,forId,by){const cc=coverCost(by,d,t);setOv(by,d,coverCode(by,t));const rec={id:"C"+(++seq),plant:k,date:iso(d),type:t,slot,forId,by,mode:cc.mode,ot:cc.ot};covers.push(rec);return rec}
+function planCover(l,commit){
+  const p=byId(l.who),out=[],temp=[];
+  if(p.shift!=="sft"||p.crew==="R") return out;
+  const slot=p.role==="Plant Technician"?"head":"asst";
+  for(const d of range(parse(l.from),parse(l.to))){
+    const t=baseDuty(l.who,d);if(!isShiftDuty(t))continue;
+    const existing=covers.find(c=>c.plant===p.plant&&c.date===iso(d)&&c.type===t&&c.slot===slot);
+    if(existing){out.push({d,t,by:existing.by,ot:existing.ot||0,mode:existing.mode});continue}
+    const c=candidates(p.plant,d,t,slot)[0];
+    if(t==="D"&&slot==="asst"&&(!c||c.ot>0)){out.push({d,t,by:null,skipped:true,saved:c?c.ot:0});continue}
+    if(c){const prev=getOv(c.id,d),rec=bookCover(p.plant,d,t,slot,l.who,c.id);temp.push([rec,prev])}
+    out.push({d,t,by:c?c.id:null,ot:c?c.ot:0,mode:c?c.mode:null});
+  }
+  if(!commit) temp.reverse().forEach(([rec,prev])=>{covers.splice(covers.indexOf(rec),1);setOv(rec.by,parse(rec.date),prev)});
+  return out;
+}
+function gapsIn(days,plants){
+  const g=[];
+  for(const k of plants||Object.keys(PLANTS))for(const d of days)for(const t of ["D","N"]){
+    const s=shiftTeam(k,d,t);
+    if(!s.head) g.push({k,d,t,slot:"head",forId:s.techAway,must:true});
+    if(!s.as) g.push({k,d,t,slot:"asst",forId:s.asstAway,must:t==="N"});
+  }
+  return g;
+}
+function rosterChecks(k,days){
+  const errors=[],warnings=[],bad=new Set();
+  for(const d of days){
+    const n=shiftTeam(k,d,"N"),dd=shiftTeam(k,d,"D");
+    const ni=[];if(n.count<2)ni.push(`only ${n.count} on shift`);if(n.count>2)ni.push(`${n.count} on shift, maximum 2`);if(!n.head)ni.push("no shift head");else if(!n.as&&n.count>=2)ni.push("no assistant");
+    if(ni.length) errors.push(`${fmtDW(d)} night: ${ni.join(", ")}`);
+    if(!dd.head) errors.push(`${fmtDW(d)} day: no shift head`);
+    else if(dd.count<2) warnings.push(`${fmtDW(d)} day: one short, allowed because general staff are on site`);
+    else if(dd.count>2) warnings.push(`${fmtDW(d)} day: ${dd.count} on shift, the extra person adds cost`);
+    const nx=addDays(d,1);
+    if(nx.getMonth()===d.getMonth()) for(const p of people.filter(x=>plantOn(x.id,d)===k)){
+      if(dutyOf(p.id,d)==="N"&&["D","G"].includes(dutyOf(p.id,nx))){errors.push(`${p.name}: day duty on ${fmtDW(nx)} straight after a night shift`);bad.add(p.id+"|"+nx.getDate())}
+    }
+  }
+  return {errors,warnings,bad};
+}
+
+/* ---------- Imported schedule: Nyamwamba 1, November 2026 ---------- */
+const NY1_NOV={
+  a1:"OFF D D D D D OFF OFF D D D/P D D/P OFF OFF D D D/P D D OFF OFF D D D/P D D OFF OFF D",
+  a0:"OFF D/P D D D/P D OFF OFF D/P D D D D OFF OFF D D/P D D/P D OFF OFF D D D D/P D OFF OFF D",
+  a3:"N/P N/P OFF OFF D/P D/P N/P N/P OFF OFF OFF D/P N/P N/P OFF OFF D/P OFF N/P OFF N/P N/P N/P N/P OFF OFF N/P N/P N/P N/P",
+  a6:"N/P N/P OFF OFF OFF D/P N/P N/P OFF OFF D/P D/P N/P N/P OFF OFF OFF D/P N/P N/P OFF OFF D/P D/P N/P N/P OFF OFF D/P D/P",
+  a8:"A/L A/L N/P N/P OFF OFF _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _",
+  a4:"ML ML ML ML OFF OFF D/P D/P D/P D/P OFF OFF OFF D/P D/P D/P OFF OFF D/P D/P D/P D/P OFF OFF OFF D/P D/P D/P OFF OFF",
+  a7:"D/P OFF N/P N/P OFF OFF D/P D/P N/P N/P OFF OFF D/P D/P N/P N/P OFF OFF OFF D/P N/P N/P OFF OFF D/P D/P N/P N/P OFF OFF",
+  a5:"OFF OFF D/P D/P N/P N/P OFF OFF N/P N/P N/P N/P OFF OFF N/P N/P N/P N/P OFF N/P OFF OFF D/P D/P N/P N/P OFF OFF D/P D/P",
+  a9:"OFF OFF D/P D/P N/P N/P OFF OFF OFF D/P N/P N/P OFF OFF D/P D/P N/P N/P OFF OFF D/P D/P N/P N/P OFF OFF OFF D/P N/P N/P",
+  a2:"OFF D D D D D OFF OFF D D D D D OFF OFF D D D D D OFF OFF D D D D D OFF OFF D",
+  aM:"OFF D D D D D OFF OFF D D D D D OFF OFF D D D D D OFF OFF D D D D D OFF OFF D"
+};
+(function importNy1(){
+  const m=new Date(2026,10,1);
+  for(const[id,row] of Object.entries(NY1_NOV)){
+    const toks=row.replace(/N\/P|D\/P|A\/L/g,s=>s.replace("/","~")).split(" ").map(s=>s.replace("~","/"));
+    toks.forEach((c,i)=>{if(c!=="_")setOv(id,new Date(2026,10,i+1),c)});
+  }
+  rosters[rk("n1",m)]={status:"approved",by:"a1",at:"2026-10-30",approvedBy:MGR,imported:"the November 2026 duty schedule (PDF)"};
+})();
+
+/* ---------- Example records: shared staff only ---------- */
+const punches={};
+(function seedLeave(){
+  const add=(who,type,from,to,reason,status,filed,extra)=>leave.push({id:"L"+(++seq),who,type,from:iso(from),to:iso(to),reason,status,filed:iso(addDays(today,filed)),...extra});
+  add("s4","casual",today,addDays(today,1),"Burial of an uncle","approved",-2);
+  add("s2","annual",addDays(today,20),addDays(today,24),"Family visit to Fort Portal","pending",-1);
+  add("s3","annual",addDays(today,-16),addDays(today,-14),"","declined",-25,{note:"Payroll week, please rebook"});
+})();
+const used={annual:0,sick:0,casual:0,mp:0,unpaid:0};
+const lastMonth=new Date(today.getFullYear(),today.getMonth()-1,1),prevMonth=new Date(today.getFullYear(),today.getMonth()-2,1);
+ot.push({id:"O2",who:"s2",month:monthKey(lastMonth),hours:6,ph:0,reason:"Saturday inspection of the Nyamwamba 2 intake weir",status:"pending"});
+const curM=monthStart(today);
+if(!rosters[rk("n1",curM)]) rosters[rk("n1",curM)]={status:"approved",by:"a1",at:iso(addDays(curM,-4)),approvedBy:MGR};
+rosters[rk("n2",curM)]=rosters[rk("n2",curM)]||{status:"draft",by:"b1",at:iso(addDays(curM,-2))};
+const teamPunch={s1:472,s2:478,s3:500};
+
+/* ---------- Derived ---------- */
+let rosterView="grid",role="staff",plantFilter="all",rosterMonth=monthStart(today),rosterPlant="n1",brush=null,genArmed=false,returnNote="";
+const myPlant=()=>role==="pt2"?byId(PT2ME).plant:role==="staff"?byId(ME).plant:null;
+const inPlant=id=>plantFilter==="all"||!plantOn(id,today)||plantOn(id,today)===plantFilter;
+const statusPill={approved:["Approved","p-ok"],pending:["Pending","p-warn"],declined:["Declined","p-bad"],cancelled:["Cancelled","p-mute"]};
+const pill=(label,cls)=>`<span class="pill ${cls}">${label}</span>`;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const datesTxt=l=>fmtD(parse(l.from))+(l.to!==l.from?" – "+fmtD(parse(l.to)):"");
+const shTxt=(d,t)=>`${fmtDW(d)} ${t==="D"?"day":"night"}`;
+function takenUpTo(id,type,upTo){
+  const yr=upTo.getFullYear();
+  const code=LEAVE_TYPES[type].code,fromSheet=range(new Date(yr,0,1),upTo).filter(d=>getOv(id,d)===code&&!leaveOn(id,d)).length;
+  return fromSheet+(id===ME?(used[type]||0):0)+leave.filter(l=>l.who===id&&l.type===type&&l.status==="approved").reduce((s,l)=>s+range(parse(l.from),parse(l.to)).filter(d=>d<=upTo&&d.getFullYear()===yr&&baseDuty(id,d)).length,0);
+}
+function balance(type){
+  const a=LEAVE_TYPES[type].allow;if(a==null)return null;
+  const mine=leave.filter(l=>l.who===ME&&l.type===type);
+  const taken=used[type]+mine.filter(l=>l.status==="approved").reduce((s,l)=>s+leaveDays(l),0);
+  const pend=mine.filter(l=>l.status==="pending").reduce((s,l)=>s+leaveDays(l),0);
+  return {allow:a,taken,pend,left:a-taken};
+}
+const liveEnd=k=>nowMin()+daysBetween(parse(k),today)*1440;
+function worked(p,k,live){if(!p)return 0;const out=p.out??(live?liveEnd(k):p.in);return Math.max(0,out-p.in)}
+const dayHours=d=>punches[iso(d)]?worked(punches[iso(d)],iso(d),true):d<today?dayPaid(ME,d):0;
+const hoursBefore=d=>range(monthStart(d),addDays(d,-1)).reduce((s,x)=>s+dayHours(x),0);
+const monthToDate=m=>monthDaysOf(m).filter(d=>d<=today).reduce((s,d)=>s+dayHours(d),0);
+const pending=()=>leave.filter(l=>l.status==="pending"&&l.who!==MGR).length+ot.filter(o=>o.status==="pending"&&o.who!==MGR).length+Object.values(rosters).filter(r=>r.status==="submitted").length;
+const openKey=()=>[iso(today),iso(addDays(today,-1))].find(k=>punches[k]&&punches[k].out==null);
+
+function statusOf(id){
+  const p=byId(id),t=dutyOf(id,today);
+  const lv=leaveOn(id,today);if(lv)return {s:"leave",t:LEAVE_TYPES[lv.type].name};
+  if(!t)return {s:"rest",t:"Off today"};
+  const st=t==="G"?hoursOf(id).start:DUTY[t].start,n=nowMin(),code=cellCode(id,today);
+  if(n<st-30) return {s:"due",t:`${code}, starts ${hm(st)}`};
+  if(p.real) return {s:"sched",t:`${code}, ${CODES[code].label.toLowerCase()}`};
+  let pin=id===ME?(punches[iso(today)]||{}).in:teamPunch[id];
+  if(pin==null&&id!==ME) pin=st-12+([...id].reduce((s,c)=>s+c.charCodeAt(0),0)%14);
+  if(pin==null||pin>n+1) return n<st+GRACE?{s:"due",t:"Starts "+hm(st)}:{s:"absent",t:"No punch yet"};
+  return {s:pin>st+GRACE?"late":"present",t:"In at "+hm(pin)};
+}
+const ST={present:["On site","p-ok"],late:["Late","p-warn"],leave:["On leave","p-info"],absent:["Not in","p-bad"],rest:["Off duty","p-mute"],due:["Not started","p-mute"],sched:["Rostered","p-ok"]};
+
+/* ---------- Nav ---------- */
+const VIEWS={today:{label:"Today",roles:["staff"]},timesheet:{label:"Timesheet",roles:["staff"]},leave:{label:"Leave",roles:["staff"]},overtime:{label:"Overtime",roles:["staff"]},roster:{label:"Monthly roster",roles:["staff","pt2","manager"]},team:{label:"Team today",roles:["pt2","manager"]},approvals:{label:"Approvals",roles:["manager"]}};
+const homeOf={staff:"today",pt2:"roster",manager:"team"};
+function current(){let h=location.hash.slice(1);if(!VIEWS[h]||!VIEWS[h].roles.includes(role))h=homeOf[role];return h}
+function renderNav(){
+  const cur=current(),gapsN=role==="staff"?0:gapsIn(range(today,addDays(today,13)),role==="pt2"?[myPlant()]:null).filter(g=>g.must).length;
+  document.getElementById("nav").innerHTML=Object.entries(VIEWS).filter(([,v])=>v.roles.includes(role)).map(([k,v])=>{
+    const b=k==="approvals"&&pending()?`<span class="badge">${pending()}</span>`:k==="roster"&&gapsN?`<span class="badge" style="background:var(--bad)">${gapsN}</span>`:"";
+    return `<a href="#${k}" ${k===cur?'aria-current="page"':""}>${v.label}${b}</a>`}).join("");
+  const id=role==="manager"?MGR:role==="pt2"?PT2ME:ME,u=byId(id);
+  document.getElementById("who").innerHTML=`<b>${u.name}</b>${designation(u)}<br>${siteOf(id)}<br>${shiftLabel(id)}<br><span style="font-size:12px">${u.real?"From your duty schedule":"Example account"}</span>`;
+}
+function plantSeg(){
+  const opts=[["all","Both plants"],...Object.entries(PLANTS)];
+  return `<div class="seg plants" role="group" aria-label="Plant">${opts.map(([k,l])=>`<button data-plant="${k}" aria-pressed="${plantFilter===k}">${l}</button>`).join("")}</div>`;
+}
+
+/* ---------- Views ---------- */
+const view=document.getElementById("view");
+let tick=null;
+
+function vToday(){
+  const ok=openKey(),td=dutyOf(ME,today),mo=monthStart(today),plan=plannedMonth(ME,mo),cm=contractMonth(ME,mo),over=Math.max(0,plan-cm),ph=phMonth(ME,mo);
+  const bals=["annual","sick","casual"].map(ty=>{const b=balance(ty);return `<div class="meter"><div class="row"><span>${LEAVE_TYPES[ty].name}</span><b>${b.left} of ${b.allow} days</b></div><div class="bar"><i style="width:${Math.max(0,b.left/b.allow*100)}%"></i></div></div>`}).join("");
+  const strip=range(today,addDays(today,6)).map(d=>{const c=cellCode(ME,d);return `<div title="${esc((CODES[c]||{}).label||"")}">${d.toLocaleDateString(undefined,{weekday:"short"})}<span class="rc ${(CODES[c]||{}).cls||""}" style="border-radius:5px;min-width:38px">${codeHtml(c)}</span>${d.getDate()}</div>`}).join("");
+  const myPend=leave.filter(l=>l.who===ME&&l.status==="pending").length+ot.filter(o=>o.who===ME&&o.status==="pending").length;
+  const myCovers=covers.filter(c=>c.by===ME&&c.date>=iso(today)).sort((a,b)=>a.date.localeCompare(b.date));
+  return `
+  <div class="head"><div><h1>Good ${now0.getHours()<12?"morning":now0.getHours()<17?"afternoon":"evening"}, ${first(ME)}</h1><p class="sub">${today.toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long",year:"numeric"})}. ${siteOf(ME)}, ${shiftLabel(ME)}, shift head.</p></div>
+  <span class="example">From the duty schedule</span></div>
+  <section class="clock" aria-label="Time clock">
+    <div><div class="digits" id="digits"></div><div class="clockmeta" id="clockmeta"></div></div>
+    <button class="punch ${ok?"out":""}" id="punch">${ok?"Clock out":"Clock in"}<span>${ok?"End your shift":td?"Start your "+DUTY[td].short.toLowerCase()+" shift":"Log work on a day off"}</span></button>
+  </section>
+  <div class="grid2">
+    <section class="panel"><h2>${monthName(mo)}</h2><div class="stack">
+      <div class="meter"><div class="row"><span>Worked this month so far</span><b id="wkHours"></b></div><div class="bar"><i id="wkBar"></i><i class="ot" id="wkOt"></i></div></div>
+      <div class="meter"><div class="row"><span>Rostered this month, including cover</span><b>${H(plan)} of ${H(cm)}</b></div>
+        <div class="row"><span>Expected overtime</span><b class="num ot">${H(over)}</b></div>${ph?`<div class="row"><span>Public-holiday hours</span><b>${H(ph)}</b></div>`:""}</div>
+      <div><div class="hint" style="margin-bottom:6px">Your next 7 days</div><div class="strip">${strip}</div></div>
+      ${myCovers.length?`<p class="hint" style="margin:0">You're covering ${myCovers.map(c=>`${first(c.forId)} on ${shTxt(parse(c.date),c.type)}`).join(", ")}. Cover hours count towards overtime.</p>`:""}
+      <p class="hint" style="margin:0">Your contract is 48 hours a week, settled monthly: ${H(cm)} for ${mo.toLocaleDateString(undefined,{month:"long"})}. Hours above that are overtime at ${OT_RATE}×. Public-holiday hours pay ${PH_RATE}×.</p>
+      <div class="actions"><a class="btn" href="#roster" style="text-decoration:none">See the duty schedule</a>${myPend?`<span class="hint" style="align-self:center">${myPend} request${myPend>1?"s":""} waiting for approval</span>`:""}</div>
+    </div></section>
+    <section class="panel"><h2>Leave balance</h2><div class="stack">${bals}<p class="hint" style="margin:0">Leave is counted in rostered shifts. When you're away, the cheapest cover is booked: relief, or the Plant Technician II staying on to 19:00, before anyone is called in on a day off.</p><a class="btn" href="#leave" style="text-decoration:none;align-self:flex-start">Request leave</a></div></section>
+  </div>`;
+}
+function bindToday(){
+  const upd=()=>{
+    const n=new Date(),dg=document.getElementById("digits");if(!dg)return;
+    dg.innerHTML=hm(n.getHours()*60+n.getMinutes())+`<span class="sec">${String(n.getSeconds()).padStart(2,"0")}</span>`;
+    const ok=openKey(),m=document.getElementById("clockmeta"),td=dutyOf(ME,today),done=punches[iso(today)];
+    if(ok){const p=punches[ok],t=dutyOf(ME,parse(ok)),st=t?DUTY[t].start:null,late=t&&p.in>st+GRACE;
+      m.innerHTML=`<span>${t?DUTY[t].name:"Day-off work"} since <strong>${hm(p.in)}</strong>${ok!==iso(today)?" yesterday":""}</span><span>Worked <strong>${dur(worked(p,ok,true))}</strong></span>${t?`<span>${late?pill("Late by "+dur(p.in-st),"p-warn"):pill("On time","p-ok")}</span>`:""}`}
+    else if(done) m.innerHTML=`<span>Shift <strong>${hm(done.in)}–${hm(done.out)}</strong></span><span>Worked <strong>${dur(worked(done,iso(today)))}</strong></span>`;
+    else m.innerHTML=td?`<span>${DUTY[td].name} today, <strong>${hm(DUTY[td].start)}–${hm(DUTY[td].end)}</strong>. Not clocked in yet.</span>`:`<span>Day off. Hours worked today still count towards this month.</span>`;
+    const w=monthToDate(monthStart(today)),c=contractMonth(ME,monthStart(today));
+    document.getElementById("wkHours").textContent=`${dur(w)} of ${H(c)}`;
+    document.getElementById("wkBar").style.width=Math.min(100,Math.min(w,c)/c*100)+"%";
+    document.getElementById("wkOt").style.width=Math.min(100,Math.max(0,w-c)/c*100)+"%";
+  };
+  upd();tick=setInterval(upd,1000);
+  document.getElementById("punch").onclick=()=>{
+    const ok=openKey(),m=Math.floor(nowMin());
+    if(ok){const p=punches[ok];p.out=Math.max(m+daysBetween(parse(ok),today)*1440,p.in+1);toast("Clocked out at "+hm(p.out))}
+    else{punches[iso(today)]={in:m,out:null};toast("Clocked in at "+hm(m))}
+    render();
+  };
+}
+
+function vTimesheet(){
+  const from=6*60,to=32*60,pos=m=>Math.max(0,Math.min(100,(m-from)/(to-from)*100));
+  let rows="",wk=0;
+  for(const d of week(monday)){
+    const k=iso(d),p=punches[k],t=dutyOf(ME,d),lv=leaveOn(ME,d),cv=coverBy(ME,d),isT=k===iso(today),c=contractMonth(ME,monthStart(d));
+    const w=worked(p,k,true),before=hoursBefore(d);wk+=w;const o=Math.max(0,before+w-Math.max(c,before));
+    let bars=t&&t!=="G"?`<div class="sched" style="left:${pos(DUTY[t].start)}%;width:${pos(DUTY[t].end)-pos(DUTY[t].start)}%"></div><div class="std" style="left:${pos(DUTY[t].start)}%"></div>`:"";
+    if(p){
+      const end=p.out??liveEnd(k),split=Math.min(end,Math.max(p.in,p.in+(c-before)));
+      if(split>p.in) bars+=`<div class="span ${p.out==null?"live":""}" style="left:${pos(p.in)}%;width:${pos(split)-pos(p.in)}%"></div>`;
+      if(end>split) bars+=`<div class="span otpart" style="left:${pos(split)}%;width:${pos(end)-pos(split)}%"></div>`;
+    }
+    let status;
+    if(lv) status=pill(LEAVE_TYPES[lv.type].name,"p-info");
+    else if(cv) status=pill(`Covering ${first(cv.forId)}`,"p-warn");
+    else if(p&&!t) status=pill("Worked on day off","p-mute");
+    else if(p) status=p.in>DUTY[t].start+GRACE?pill("Late","p-warn"):pill(p.out==null?"On shift":"On time","p-ok");
+    else if(!t) status=`<span class="hint">Day off</span>`;
+    else if(d>today||isT) status=`<span class="hint">${DUTY[t].name}</span>`;
+    else status=pill("Absent","p-bad");
+    const ph=isPH(d)?pill(HOLIDAYS[k]+`, ${PH_RATE}×`,"p-info"):"";
+    rows+=`<div class="day">${d.toLocaleDateString(undefined,{weekday:"short"})}<small>${fmtD(d)}</small></div>
+      <div class="track">${bars}</div>
+      <div class="num">${w?H(w):"–"}</div><div class="num ot col-ot">${o?"+"+hrs(o/60):""}</div>
+      <div></div><div style="grid-column:2/-1;margin:-2px 0 8px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)">${ph}${status}${t&&!p&&!lv?`<span>${hm(DUTY[t].start)}–${hm(DUTY[t].end)}</span>`:""}${p?`<span>${hm(p.in)} – ${p.out!=null?hm(p.out)+(p.out>=1440?" next day":""):"on shift"}</span>`:""}</div>`;
+  }
+  let scale="";for(let h=6;h<=32;h+=4)scale+=`<span style="left:${(h*60-from)/(to-from)*100}%">${String(h%24).padStart(2,"0")}:00</span>`;
+  const mo=monthStart(today),cm=contractMonth(ME,mo),mtd=monthToDate(mo),plan=plannedMonth(ME,mo);
+  return `
+  <div class="head"><div><h1>Timesheet</h1><p class="sub">Week of ${fmtD(monday)} – ${fmtD(addDays(monday,6))}. Overtime is settled monthly, once ${monthName(mo)} passes ${H(cm)}.</p></div>
+  <div class="counts"><div><b>${H(wk)}</b><span>This week</span></div><div><b>${H(mtd)}</b><span>${mo.toLocaleDateString(undefined,{month:"long"})} so far</span></div><div><b style="color:var(--ot)">${H(Math.max(0,plan-cm))}</b><span>Overtime expected by month end</span></div></div></div>
+  <section class="panel"><div class="ribbon">
+    <div></div><div class="scale">${scale}</div><div class="hd num">Hours</div><div class="hd num col-ot">OT</div>${rows}
+  </div>
+  <div class="legend"><span><i style="border:1.5px dashed var(--muted)"></i>Rostered shift</span><span><i style="background:var(--accent)"></i>Contract hours</span><span><i style="background:var(--ot)"></i>Above the monthly contract</span><span><i style="background:var(--bad);opacity:.55;width:3px"></i>Shift start</span></div></section>
+  <p class="hint" style="margin:0">Shift-team hours count in full, 12 hours per shift. Night shifts show on the day they start. Hours after midnight on a public holiday pay the holiday rate. Earlier days without clock-in records use rostered hours.</p>`;
+}
+
+function vLeave(){
+  const cards=Object.keys(LEAVE_TYPES).filter(t=>LEAVE_TYPES[t].allow).map(t=>{const b=balance(t);return `<div class="panel bal"><span class="lbl">${LEAVE_TYPES[t].name}</span><span class="big">${b.left}<small>days left</small></span><span class="hint">${b.taken} taken of ${b.allow}${b.pend?`, ${b.pend} pending`:""}</span><div class="bar"><i style="width:${Math.max(0,b.left/b.allow*100)}%"></i></div></div>`}).join("");
+  const mine=leave.filter(l=>l.who===ME).sort((a,b)=>b.from.localeCompare(a.from));
+  const coverTxt=l=>{if(l.status!=="approved")return "";const cs=covers.filter(c=>c.forId===l.who&&c.date>=l.from&&c.date<=l.to);return cs.length?`<div class="note">Covered by ${[...new Set(cs.map(c=>first(c.by)))].join(", ")}</div>`:""};
+  const rows=mine.map(l=>`<tr><td><b>${LEAVE_TYPES[l.type].name}</b>${l.reason?`<div class="note">${esc(l.reason)}</div>`:""}</td><td>${datesTxt(l)}</td><td>${leaveDays(l)}</td><td>${pill(...statusPill[l.status])}${l.note?`<div class="note">${esc(l.note)}</div>`:""}${coverTxt(l)}</td><td>${l.status==="pending"?`<button class="btn sm danger" data-cancel-leave="${l.id}">Cancel</button>`:""}</td></tr>`).join("");
+  let n=addDays(today,1);while(!baseDuty(ME,n))n=addDays(n,1);
+  return `
+  <div class="head"><div><h1>Leave</h1><p class="sub">Balances for ${today.getFullYear()}, counted in rostered shifts.</p></div></div>
+  <div class="grid3">${cards}</div>
+  <div class="grid2">
+    <section class="panel"><h2>My requests</h2><div class="tablewrap"><table><thead><tr><th>Type</th><th>Dates</th><th>Shifts</th><th>Status</th><th></th></tr></thead><tbody>${rows||`<tr><td colspan="5" class="empty">No leave requests yet</td></tr>`}</tbody></table></div></section>
+    <section class="panel"><h2>Request leave</h2>
+      <form id="leaveForm" novalidate>
+        <div class="field full"><label for="lvType">Type</label><select id="lvType">${Object.entries(LEAVE_TYPES).map(([k,v])=>`<option value="${k}">${v.name}</option>`).join("")}</select></div>
+        <div class="field"><label for="lvFrom">From</label><input type="date" id="lvFrom" value="${iso(n)}"></div>
+        <div class="field"><label for="lvTo">To</label><input type="date" id="lvTo" value="${iso(n)}"></div>
+        <div class="field full"><label for="lvReason">Reason <span class="hint">(optional)</span></label><textarea id="lvReason" placeholder="Anything the Plant Manager should know"></textarea></div>
+        <div class="err" id="lvErr" hidden></div>
+        <div class="actions"><span class="hint" id="lvDays"></span><button class="btn primary" type="submit">Send request</button></div>
+      </form>
+    </section>
+  </div>`;
+}
+function bindLeave(){
+  const $=id=>document.getElementById(id);
+  const calc=()=>{const a=$("lvFrom").value,b=$("lvTo").value;if(!a||!b||b<a){$("lvDays").textContent="";return}
+    const ds=range(parse(a),parse(b)).map(d=>baseDuty(ME,d)).filter(Boolean),bal=balance($("lvType").value);
+    const nd=ds.filter(t=>t==="D").length,nn=ds.filter(t=>t==="N").length;
+    $("lvDays").textContent=`${ds.length} shift${ds.length===1?"":"s"}`+(nd&&nn?` (${nd} day, ${nn} night)`:"")+(bal?`, ${bal.left-bal.pend} available`:"")};
+  ["lvFrom","lvTo","lvType"].forEach(id=>$(id).addEventListener("input",()=>{if(id==="lvFrom"&&$("lvTo").value<$("lvFrom").value)$("lvTo").value=$("lvFrom").value;calc()}));calc();
+  $("leaveForm").addEventListener("submit",e=>{e.preventDefault();const err=$("lvErr");err.hidden=true;const fail=m=>{err.textContent=m;err.hidden=false};
+    const a=$("lvFrom").value,b=$("lvTo").value,t=$("lvType").value;
+    if(!a||!b) return fail("Choose a start and end date.");
+    if(b<a) return fail("The end date is before the start date. Pick an end date on or after "+fmtD(parse(a))+".");
+    const n=range(parse(a),parse(b)).filter(d=>baseDuty(ME,d)).length;if(!n) return fail("Those dates are all days off on the roster, so no leave is needed.");
+    const bal=balance(t);if(bal&&n>bal.left-bal.pend) return fail(`You have ${bal.left-bal.pend} ${LEAVE_TYPES[t].name.toLowerCase()} days available. Shorten the request or choose unpaid leave.`);
+    if(leave.some(l=>l.who===ME&&(l.status==="pending"||l.status==="approved")&&!(b<l.from||a>l.to))) return fail("These dates overlap a request you already made.");
+    leave.push({id:"L"+(++seq),who:ME,type:t,from:a,to:b,reason:$("lvReason").value.trim(),status:"pending",filed:iso(today)});
+    toast("Leave request sent to the Plant Manager");render()});
+  view.querySelectorAll("[data-cancel-leave]").forEach(b=>b.onclick=()=>{leave.find(l=>l.id===b.dataset.cancelLeave).status="cancelled";toast("Request cancelled");render()});
+}
+
+function vOvertime(){
+  const mine=ot.filter(o=>o.who===ME).sort((a,b)=>b.month.localeCompare(a.month));
+  const months=[0,-1,-2].map(n=>new Date(today.getFullYear(),today.getMonth()+n,1));
+  const paidAs=o=>o.hours*OT_RATE+(o.ph||0)*PH_RATE;
+  const mRows=months.map(m=>{const now=monthKey(m)===monthKey(today),cm=contractMonth(ME,m),w=now?monthToDate(m):plannedMonth(ME,m),o=Math.max(0,w-cm),ph=phMonth(ME,m),claimed=ot.find(x=>x.who===ME&&x.month===monthKey(m)&&x.status!=="cancelled");
+    return `<tr><td><b>${monthName(m)}</b>${now?`<div class="note">In progress, ${H(Math.max(0,plannedMonth(ME,m)-cm))} expected</div>`:""}</td><td>${H(w)}</td><td>${H(cm)}</td><td class="num ot" style="text-align:left">${o?H(o):"–"}</td><td>${ph?H(ph):"–"}</td><td>${claimed?pill(...statusPill[claimed.status]):(o||ph)&&!now?`<button class="btn sm" data-claim="${monthKey(m)}|${hrs(o/60)}|${hrs(ph/60)}">Claim</button>`:now?`<span class="note">Claim after month end</span>`:""}</td></tr>`}).join("");
+  const rows=mine.map(o=>`<tr><td><b>${monthName(parse(o.month+"-01"))}</b><div class="note">${esc(o.reason)}</div></td><td>${hrs(o.hours)}h${o.ph?`<div class="note">+ ${hrs(o.ph)}h public holiday</div>`:""}</td><td>${hrs(paidAs(o))}h</td><td>${pill(...statusPill[o.status])}</td><td>${o.status==="pending"?`<button class="btn sm danger" data-cancel-ot="${o.id}">Cancel</button>`:""}</td></tr>`).join("");
+  const lm=months[1];
+  return `
+  <div class="head"><div><h1>Overtime</h1><p class="sub">Your contract is 48 hours a week, settled monthly. Hours above the month's contract, including cover shifts, pay ${OT_RATE}×. Hours worked on a public holiday pay ${PH_RATE}×.</p></div></div>
+  <section class="panel"><h2>Monthly hours</h2><div class="tablewrap"><table><thead><tr><th>Month</th><th>Hours</th><th>Contract</th><th>Overtime</th><th>Public holiday</th><th></th></tr></thead><tbody>${mRows}</tbody></table></div><p class="hint" style="margin:10px 0 0">The monthly contract is 48 hours × days in the month ÷ 7. Earlier months use rostered hours until clock-in records exist.</p></section>
+  <div class="grid2">
+    <section class="panel"><h2>My claims</h2><div class="tablewrap"><table><thead><tr><th>Month</th><th>Hours</th><th>Paid as</th><th>Status</th><th></th></tr></thead><tbody>${rows||`<tr><td colspan="5" class="empty">No overtime claims yet</td></tr>`}</tbody></table></div></section>
+    <section class="panel"><h2>Claim overtime</h2>
+      <form id="otForm" novalidate>
+        <div class="field full"><label for="otMonth">Month</label><select id="otMonth">${months.slice(1).map(m=>`<option value="${monthKey(m)}">${monthName(m)}</option>`).join("")}</select></div>
+        <div class="field"><label for="otHours">Overtime hours</label><input type="number" id="otHours" min="0" max="200" step="0.25" value="${hrs(Math.max(0,plannedMonth(ME,lm)-contractMonth(ME,lm))/60)}"></div>
+        <div class="field"><label for="otPh">Public-holiday hours</label><input type="number" id="otPh" min="0" max="100" step="0.25" value="${hrs(phMonth(ME,lm)/60)}"></div>
+        <div class="field full"><label for="otReason">What made the month longer?</label><textarea id="otReason" placeholder="For example: covered a night shift while a colleague was on leave"></textarea></div>
+        <div class="err" id="otErr" hidden></div>
+        <div class="actions"><span class="hint" id="otRate"></span><button class="btn primary" type="submit">Submit claim</button></div>
+      </form>
+    </section>
+  </div>`;
+}
+function bindOvertime(){
+  const $=id=>document.getElementById(id);
+  const show=()=>{const h=parseFloat($("otHours").value)||0,p=parseFloat($("otPh").value)||0;$("otRate").textContent=`Paid as ${hrs(h*OT_RATE+p*PH_RATE)}h`};
+  ["otHours","otPh"].forEach(id=>$(id).addEventListener("input",show));show();
+  view.querySelectorAll("[data-claim]").forEach(b=>b.onclick=()=>{const[k,h,p]=b.dataset.claim.split("|");$("otMonth").value=k;$("otHours").value=h;$("otPh").value=p;$("otReason").focus();show()});
+  $("otForm").addEventListener("submit",e=>{e.preventDefault();const err=$("otErr");err.hidden=true;const fail=m=>{err.textContent=m;err.hidden=false};
+    const m=$("otMonth").value,h=parseFloat($("otHours").value)||0,p=parseFloat($("otPh").value)||0,r=$("otReason").value.trim();
+    if(ot.some(o=>o.who===ME&&o.month===m&&o.status!=="cancelled")) return fail("You've already claimed that month. Cancel the existing claim to change it.");
+    if(h<=0&&p<=0) return fail("Enter overtime or public-holiday hours, above zero.");
+    if(!r) return fail("Say what made the month longer so the Plant Manager can approve it.");
+    ot.push({id:"O"+(++seq),who:ME,month:m,hours:h,ph:p,reason:r,status:"pending"});toast("Overtime claim submitted");render()});
+  view.querySelectorAll("[data-cancel-ot]").forEach(b=>b.onclick=()=>{ot.find(o=>o.id===b.dataset.cancelOt).status="cancelled";toast("Claim cancelled");render()});
+}
+
+/* ---------- Team today ---------- */
+function vTeam(){
+  const order=["absent","late","due","present","sched","leave","rest"];
+  const all=people.filter(p=>inPlant(p.id)),stat={};all.forEach(p=>stat[p.id]=statusOf(p.id));
+  const count=ps=>{const c={present:0,late:0,leave:0,absent:0,rest:0,due:0,sched:0};ps.forEach(p=>c[stat[p.id].s]++);return c};
+  const c=count(all),can=role==="manager"||role==="pt2";
+  const sickBtn=id=>can&&dutyOf(id,today)&&!leaveOn(id,today)&&(role==="manager"||plantOn(id,today)===myPlant())?`<button class="btn sm sick" data-sick="${id}">Mark sick</button>`:"";
+  const card=(p,tags="")=>`<div class="person"><div class="avatar">${initials(p.name)}</div><div class="meta"><b>${p.name}</b><span class="t">${designation(p)}${crewTxt(p.id)?", "+crewTxt(p.id):""}</span><span class="tags">${tags}${pill(...ST[stat[p.id].s])} <span class="t">${stat[p.id].t}</span></span></div>${sickBtn(p.id)}</div>`;
+  const sort=ps=>ps.sort((a,b)=>order.indexOf(stat[a.id].s)-order.indexOf(stat[b.id].s));
+  const shiftBox=(k,t)=>{const s=shiftTeam(k,today,t);
+    const headCard=s.head?card(byId(s.head),`<span class="tag head">Shift head</span>${s.headCover?`<span class="tag covr">${s.headCover.forId?"Covering "+first(s.headCover.forId):"Cover"}${s.headCover.mode==="extend"?" to 19:00":""}</span>`:""}`):`<div class="person gap"><div class="meta"><b>No shift head</b><span class="t">${s.techAway?first(s.techAway)+" is away. ":""}Assign a technician or the Plant Technician II.</span></div></div>`;
+    const asCard=s.as?card(byId(s.as),s.asCover?`<span class="tag covr">${s.asCover.forId?"Covering "+first(s.asCover.forId):"Cover"}</span>`:""):`<div class="person gap"><div class="meta"><b>No assistant</b><span class="t">${s.asstAway?first(s.asstAway)+" is away. ":""}Assign relief or an assistant on a day off.</span></div></div>`;
+    const bad=!s.head||(!s.as&&t==="N")||(t==="N"&&s.count>2),short=!bad&&!s.as;
+    const lbl=!s.head?pill("Shift head missing","p-bad"):!s.as?(t==="N"?pill("Night needs 2 on shift","p-bad"):pill("Short an assistant","p-warn")):s.count>2?pill(`${s.count} on shift`,t==="N"?"p-bad":"p-warn"):pill("2 on shift","p-ok");
+    return `<div class="crewbox ${bad?"bad":""}"><h3><span>${t==="D"?"D/P day shift, 07:00–19:00":"N/P night shift, 19:00–07:00"}</span>${lbl}</h3>${short?`<p class="hint" style="margin:0">Allowed on day shift: general-shift staff are on site 08:00–17:00. No overtime spent.</p>`:""}<div class="crewpair">${headCard}${asCard}</div>${bad&&can?`<a class="btn sm" href="#roster" style="text-decoration:none;align-self:flex-start">Arrange cover</a>`:""}</div>`};
+  const groups=[...Object.keys(PLANTS).filter(k=>plantFilter==="all"||k===plantFilter).map(k=>[k,PLANTS[k],all.filter(p=>plantOn(p.id,today)===k)]),[null,"Shared staff",all.filter(p=>!plantOn(p.id,today))]];
+  const sections=groups.map(([k,name,ps])=>{const cc=count(ps);
+    const onShift=k?["D","N"].flatMap(t=>shiftTeam(k,today,t).on):[];
+    const gen=sort(ps.filter(p=>(p.shift==="gen"||p.crew==="R")&&!onShift.includes(p.id)));
+    const off=ps.filter(p=>p.shift==="sft"&&p.crew!=="R"&&!onShift.includes(p.id)&&!dutyOf(p.id,today)&&!leaveOn(p.id,today));
+    const away=ps.filter(p=>p.shift==="sft"&&p.crew!=="R"&&leaveOn(p.id,today));
+    return `<section class="plantsec"><div class="head"><div><h2>${name}</h2><p class="sub">${k?`From the ${monthName(today)} duty schedule`:"Work across both plants, general shift"}</p></div><span class="hint">${cc.present+cc.late+cc.sched} on duty${cc.leave?`, ${cc.leave} on leave`:""}${cc.absent?`, ${cc.absent} not in`:""}</span></div>
+      ${k?shiftBox(k,"D")+shiftBox(k,"N"):""}
+      ${gen.length?`<div class="groupttl">Day general and relief</div><div class="board">${gen.map(p=>card(p)).join("")}</div>`:""}
+      ${away.length?`<p class="hint" style="margin:0">Away from their shift today: ${away.map(p=>`${p.name} (${LEAVE_TYPES[leaveOn(p.id,today).type].name.toLowerCase()})`).join(", ")}</p>`:""}
+      ${off.length?`<p class="hint" style="margin:0">Off today: ${off.map(p=>p.name).join(", ")}</p>`:""}
+    </section>`}).join("");
+  return `
+  <div class="head"><div><h1>Team today</h1><p class="sub">${plantFilter==="all"?"Both plants":PLANTS[plantFilter]} with shared staff. Every shift needs a shift head and an assistant.</p></div>
+  <div class="counts"><div><b>${c.present+c.sched}</b><span>On duty</span></div><div><b style="color:var(--warn)">${c.late}</b><span>Late</span></div><div><b>${c.due}</b><span>Not started</span></div><div><b style="color:var(--info)">${c.leave}</b><span>On leave</span></div><div><b style="color:var(--bad)">${c.absent}</b><span>Not in</span></div></div></div>
+  ${plantSeg()}${sections}
+  <p class="hint" style="margin:0">Plant statuses come from the duty schedules. Clock-in times for shared staff are examples.</p>`;
+}
+function bindTeam(){
+  view.querySelectorAll("[data-sick]").forEach(b=>b.onclick=()=>{
+    const id=b.dataset.sick,l={id:"L"+(++seq),who:id,type:"sick",from:iso(today),to:iso(today),reason:"Reported sick today",status:"approved",filed:iso(today)};
+    leave.push(l);const plan=planCover(l,true);
+    const x=plan[0];const msg=!x?`${first(id)} marked sick for today`:x.skipped?`${first(id)} marked sick. Day shift runs with one assistant short, no overtime spent`:x.by?`${first(id)} marked sick. ${byId(x.by).name} covers, ${costTxt(x.ot)}`:`${first(id)} marked sick. Nobody is free, so arrange cover on the roster`;
+    toast(msg);render()});
+}
+
+/* ---------- Monthly roster: the duty schedule ---------- */
+const metaOf=(k,m)=>rosters[rk(k,m)]||{status:"none"};
+const canEdit=(k,m)=>{const r=metaOf(k,m);if(role==="manager")return r.status!=="none";if(role==="pt2")return byId(PT2ME).plant===k&&(r.status==="draft"||r.status==="returned");return false};
+const STATUS={none:["Not started","p-mute"],draft:["Draft","p-warn"],submitted:["Waiting for approval","p-info"],returned:["Returned for changes","p-bad"],approved:["Approved and published","p-ok"]};
+function scheduleRows(k){
+  const ds=monthDaysOf(rosterMonth),here=p=>ds.some(d=>plantOn(p.id,d)===k);
+  return [["Daily Plant Maintenance",people.filter(p=>here(p)&&(p.sc==="F"||(p.sc==="G"&&p.role==="Plant Assistant")))],["Daily Plant Operations",people.filter(p=>here(p)&&p.crew)],["Sanitation & Environment",people.filter(p=>here(p)&&p.sc==="E")],["Machine operator",people.filter(p=>here(p)&&p.role==="Machine Operator")]];
+}
+function personSummary(p,days,k){
+  if(k)days=days.filter(d=>plantOn(p.id,d)===k);if(!days.length)return ["","","","","","","","",""];
+  const codes=days.map(d=>cellCode(p.id,d)),m=monthStart(days[0]),end=days[days.length-1];
+  const work=codes.filter(c=>(CODES[c]||{}).type).length,off=codes.filter(c=>c==="OFF").length;
+  const al=codes.filter(c=>c==="A/L").length,mp=codes.filter(c=>c==="ML").length;
+  const allow=LEAVE_TYPES.annual.allow,close=allow-takenUpTo(p.id,"annual",end),open=allow-takenUpTo(p.id,"annual",today<end?today:end);
+  const hours=plannedMonth(p.id,m),otm=Math.max(0,hours-contractMonth(p.id,m));
+  return [work,al,mp,"–",off,close,open,hrs(hours/60),otm>0?hrs(otm/60):""];
+}
+let SUM_HEAD=["Work Days","Ann. Leave Taken","[M]/[P] Leave Taken","[M]/[P] Leave Remain","Off Days","Next Leave Bal.","Current Leave Bal.","Hours","O.T Hrs"];
+const setSumHead=m=>{SUM_HEAD[5]=new Date(m.getFullYear(),m.getMonth()+1,1).toLocaleDateString(undefined,{month:"short"})+" Leave Bal."};
+const DAY_ROWS=[["Day Power House",c=>c.loc==="DP"],["Night Power House",c=>c.loc==="NP"],["Night Weir",c=>c.loc==="NW"],["Day General",c=>c.loc==="DG"],["Off",c=>c.loc==="OFF"],["Casual Leave",c=>c.loc==="CL"],["Annual Leave",c=>c.loc==="AL"],["Sick Leave",c=>c.loc==="SL"],["Maternity/Paternity Leave",c=>c.loc==="MP"],["Total at work",c=>!!c.type]];
+function weekGroups(days){const names=["1st WEEK","2nd WEEK","3rd WEEK","4th WEEK"];const g=[];days.forEach(d=>{const i=Math.floor((d.getDate()-1)/7);const n=i<4?names[i]:"LAST WEEK";if(!g.length||g[g.length-1].n!==n)g.push({n,c:1});else g[g.length-1].c++});return g}
+function monthDays(){return monthDaysOf(rosterMonth)}
+function gridCell(id,d){
+  const c=cellCode(id,d),x=CODES[c]||{},p=byId(id);
+  if(x.leave) return ["L","lv",x.label];
+  if(x.type&&leaveOn(id,d,"pending")) return ["?","pend","Leave requested"];
+  if(x.type==="D"||x.type==="N"){const t=c==="N/W"?"W":x.type;return (x.ot||p.shift==="gen")?[t,"cov",`${x.label}, cover (overtime)`]:[t,x.type==="D"?"on":"night",x.label]}
+  if(x.type==="G") return ["G","gen",x.label];
+  return ["","",c===""?"Not on the schedule":"Off"];
+}
+
+function vRoster(){
+  if(role==="pt2") rosterPlant=byId(PT2ME).plant;
+  if(role==="staff") rosterPlant=byId(ME).plant;
+  const k=rosterPlant,m=rosterMonth,days=monthDays(),meta=metaOf(k,m),edit=canEdit(k,m),tdy=iso(today);setSumHead(m);
+  const head=`<div class="head"><div><h1>Monthly roster</h1><p class="sub">${role==="pt2"?`You build the ${PLANTS[k]} duty schedule each month and submit it to the Plant Manager.`:role==="manager"?"Each plant's Plant Technician II builds the duty schedule monthly. Review, approve and publish it here.":"Your plant's approved duty schedule."}</p></div>${pill(...STATUS[meta.status])}</div>`;
+  const nav=`<div class="monthbar">
+    <div class="mnav"><button class="btn sm" id="mPrev">Previous</button><span class="mlabel">${monthName(m)}</span><button class="btn sm" id="mNext">Next</button>${monthKey(m)!==monthKey(today)?`<button class="btn sm" id="mNow">This month</button>`:""}</div>
+    ${role==="manager"?`<div class="seg plants" role="group" aria-label="Plant">${Object.entries(PLANTS).map(([pk,l])=>`<button data-rplant="${pk}" aria-pressed="${pk===k}">${l}</button>`).join("")}</div>`:""}
+  </div>`;
+  if(role==="staff"&&meta.status!=="approved") return head+nav+`<section class="panel"><h2>The ${monthName(m)} schedule isn't published yet</h2><p class="hint" style="margin:0">It appears here once the Plant Manager approves it.</p></section>`;
+  const chk=rosterChecks(k,days);
+  let actions="";
+  if(meta.status==="none") actions=`<button class="btn primary" id="startRoster">Start the ${m.toLocaleDateString(undefined,{month:"long"})} schedule</button>`;
+  else if(role==="pt2"&&edit) actions=`<button class="btn" id="genRoster">${genArmed?"Click again to replace all edits":"Reset to rotation"}</button><button class="btn primary" id="submitRoster" ${chk.errors.length?"disabled title=\"Fix the problems listed below first\"":""}>Submit to Plant Manager</button>`;
+  else if(role==="manager"&&meta.status==="submitted") actions=`<input id="retNote" placeholder="What needs changing?" style="width:220px" value="${esc(returnNote)}"><button class="btn danger" id="returnRoster">Return for changes</button><button class="btn primary" id="approveRoster" ${chk.errors.length?"disabled":""}>Approve and publish</button>`;
+  else if(role==="manager"&&meta.status==="approved") actions=`<button class="btn" id="reopenRoster">Reopen as draft</button>`;
+  else if(role==="manager"&&(meta.status==="draft"||meta.status==="returned")) actions=`<span class="hint">With ${byId(meta.by).name} for preparation</span>`;
+  const statusLine=meta.imported?`Imported from ${meta.imported}, approved by the Plant Manager.${chk.errors.length?" The schedule checks below found issues in it.":""}`:meta.status==="none"?`No ${monthName(m)} schedule yet for ${PLANTS[k]}. Below is a preview from the rotation.`:`Prepared by ${byId(meta.by).name}${meta.at?` on ${fmtD(parse(meta.at))}`:""}${meta.submittedAt?`. Submitted ${fmtD(parse(meta.submittedAt))}`:""}${meta.approvedBy&&meta.status==="approved"?`. Approved by ${byId(meta.approvedBy).name}`:""}.${meta.note?` Plant Manager's note: ${esc(meta.note)}`:""}`;
+  const palette=edit?`<div class="palette" role="group" aria-label="Duty codes">${["D/P","N/P","O.T D/P","O.T N/P","D","OFF","N/W","A/L","S/L","C/L","ML"].map(c=>`<button data-brush="${c}" aria-pressed="${brush===c}" title="${esc(CODES[c].label)}"><span class="rc ${CODES[c].cls}">${codeHtml(c)}</span></button>`).join("")}<button data-brush="AUTO" aria-pressed="${brush==="AUTO"}" title="Back to the rotation"><span class="rc c-blank" style="color:var(--ink);border:1px dashed var(--muted)">Auto</span></button><span class="hint">${brush?`Painting ${brush==="AUTO"?"back to the rotation":brush}. Click or drag across cells.`:"Pick a code, then click or drag across cells."}</span></div>`:"";
+  const wg=weekGroups(days),groups=scheduleRows(k);let n=0;
+  const dh=d=>`${isWeekend(d)?"we":""} ${isPH(d)?"ph":""} ${iso(d)===tdy?"tdy":""}`;
+  const thead=`<thead>
+    <tr><th rowspan="4">#</th><th rowspan="4">Emp.<br>No.</th><th rowspan="4">Shift</th><th rowspan="4">Designation</th><th rowspan="4">Name of Employee</th><th class="mon" colspan="${days.length}">${m.toLocaleDateString(undefined,{month:"long"})}-${m.getFullYear()}</th><th colspan="${SUM_HEAD.length}">SUMMARY</th></tr>
+    <tr>${wg.map(g=>`<th class="wk" colspan="${g.c}">${g.n}</th>`).join("")}${SUM_HEAD.map(h=>`<th rowspan="3" style="white-space:normal;min-width:44px;font-size:10.5px">${h}</th>`).join("")}</tr>
+    <tr>${days.map(d=>`<th class="${dh(d)}" ${isPH(d)?`title="${esc(HOLIDAYS[iso(d)])}"`:""}>${d.toLocaleDateString(undefined,{weekday:"short"})}</th>`).join("")}</tr>
+    <tr>${days.map(d=>`<th class="${dh(d)}">${String(d.getDate()).padStart(2,"0")}</th>`).join("")}</tr></thead>`;
+  const body=groups.map(([title,ps])=>ps.length?`<tr class="sec"><td colspan="${5+days.length+SUM_HEAD.length}">${title}</td></tr>`+ps.map(p=>{n++;const sm=personSummary(p,days,k);const moved=(p.moves||[]).find(mv=>days.some(d=>iso(d)===mv.from));return `<tr><td class="n">${n}</td><td class="l">${esc(p.emp||"–")}</td><td class="n">${p.sc}</td><td class="l">${designation(p)}</td><td class="l"><b>${esc(p.name)}</b>${p.real?"":` <span class="note">example</span>`}${moved?`<div class="note">${moved.plant===k?"Joins":"Moves to "+PLANTS[moved.plant].replace(" HPP","")} ${fmtD(parse(moved.from))}</div>`:""}</td>${days.map(d=>{if(plantOn(p.id,d)!==k)return `<td><div class="rc c-blank" title="${esc(p.name)} works at ${esc(PLANTS[plantOn(p.id,d)]||"another site")} on ${fmtDW(d)}"></div></td>`;const c=cellCode(p.id,d),x=CODES[c]||{},lv=leaveOn(p.id,d),ov=getOv(p.id,d)!==undefined&&!lv;return `<td><div class="rc ${x.cls||""} ${ov?"ov":""} ${chk.bad.has(p.id+"|"+d.getDate())?"err":""}" data-p="${p.id}" data-d="${d.getDate()}" title="${esc(p.name)}, ${fmtDW(d)}: ${esc(x.label||"")}${lv?" (approved leave)":""}">${codeHtml(c)}</div></td>`}).join("")}${sm.map((v,i)=>`<td class="sum ${i===8?"ot":""}">${v}</td>`).join("")}</tr>`}).join(""):"").join("");
+  const legend=`<p class="hint" style="margin:0">N/P: Night shift power house. D/P: Day shift power house. D: Day general. OFF: Off shift. N/W: Night shift weir. O.T: Overtime cover shift. A/L, S/L, C/L, ML: Annual, sick, casual, maternity/paternity leave. A cell with a dark outline was changed by hand.</p>`;
+  const allP=groups.flatMap(g=>g[1]),letters=[...new Set(allP.map(p=>p.sc))].sort();
+  const hoursTbl=`<table class="hourtbl"><thead><tr><th colspan="4" style="text-align:center">Working Hour/Day</th></tr><tr><th>Shift</th><th>From</th><th>To</th><th>Days</th></tr></thead><tbody>${Object.entries(SHIFT_HOURS).filter(([s])=>allP.some(p=>p.sc===s)).map(([s,h])=>`<tr><td><b>${s}</b></td><td>${h.from}Hrs</td><td>${h.to}Hrs</td><td>${h.days}</td></tr>`).join("")}</tbody></table>`;
+  const rowsDef=DAY_ROWS.filter(([name,f])=>name!=="Night Weir"||allP.some(p=>days.some(d=>f(CODES[cellCode(p.id,d)]||{}))));
+  const daySum=`<table class="duty daysum"><thead><tr><th>Work Days<br>Total</th><th>Site Location</th>${days.map(d=>`<th class="${dh(d)}">${d.toLocaleDateString(undefined,{weekday:"short"})}<br>${String(d.getDate()).padStart(2,"0")}</th>`).join("")}${letters.map(l=>`<th>${l}</th>`).join("")}</tr></thead><tbody>${rowsDef.map(([name,f])=>{
+    const per=days.map(d=>allP.filter(p=>plantOn(p.id,d)===k&&f(CODES[cellCode(p.id,d)]||{})).length),tot=per.reduce((a,b)=>a+b,0);
+    const cls=(i,v)=>{const d=days[i];if(name==="Night Power House"){const s=shiftTeam(k,d,"N");return v!==2||!s.head||!s.as?"bad":""}if(name==="Day Power House"){const s=shiftTeam(k,d,"D");return !s.head?"bad":v!==2?"warn":""}return ""};
+    return `<tr class="${name==="Total at work"?"tot":""}"><td class="sum">${tot}</td><td class="l">${name}</td>${per.map((v,i)=>`<td class="sum ${cls(i,v)}">${v}</td>`).join("")}${letters.map(l=>`<td class="sum">${allP.filter(p=>p.sc===l).reduce((s,p)=>s+days.filter(d=>plantOn(p.id,d)===k&&f(CODES[cellCode(p.id,d)]||{})).length,0)}</td>`).join("")}</tr>`}).join("")}</tbody></table>`;
+  const gaps=gapsIn(days.filter(d=>d>=today),[k]).filter(g=>g.must);
+  const canCover=role==="manager"||(role==="pt2"&&edit);
+  const gapRow=(g,i)=>{let cands=candidates(g.k,g.d,g.t,g.slot);if(!cands.length){cands=candidates(g.k,g.d,g.t,g.slot,true);g.relaxed=true}
+    return `<div class="gaprow"><div><b>${shTxt(g.d,g.t)}</b><div class="note">${g.slot==="head"?"No shift head":"No assistant"}${g.forId?`, ${first(g.forId)} is away`:""}</div></div>${canCover?(cands.length?`<div class="actions">${g.relaxed?pill("Nobody rested is free","p-warn"):""}<select id="gap${i}" aria-label="Cover for ${shTxt(g.d,g.t)}">${cands.map(c=>`<option value="${c.id}">${byId(c.id).name}, ${howTxt(c.id,c.mode)}: ${costTxt(c.ot,c.ph)}${g.relaxed?", no rest before next shift":""}</option>`).join("")}</select><button class="btn sm primary" data-assign="${i}">Assign cover</button></div>`:pill("Nobody free","p-bad")):""}</div>`};
+  window.__gaps=gaps;
+  const checks=`<section class="panel" style="border-color:${chk.errors.length?"var(--bad)":"var(--ok)"}"><h2>${chk.errors.length?`${chk.errors.length} problem${chk.errors.length>1?"s":""} to fix before ${role==="manager"?"approving":"submitting"}`:"Schedule checks passed"}</h2>
+    <p class="hint" style="margin:0 0 6px">Every night shift has exactly 2 people: a Plant Technician or Plant Technician II as shift head, and a Plant Assistant. Every day shift has a shift head. Nobody works a day straight after a night.</p>
+    ${chk.errors.length?`<ul class="checks" style="margin:0;padding-left:18px;color:var(--bad)">${chk.errors.slice(0,12).map(e=>`<li>${esc(e)}</li>`).join("")}${chk.errors.length>12?`<li>and ${chk.errors.length-12} more</li>`:""}</ul>`:""}
+    ${chk.warnings.length?`<details style="margin-top:6px"><summary class="hint">${chk.warnings.length} note${chk.warnings.length>1?"s":""} that don't block ${role==="manager"?"approval":"submission"}</summary><ul class="checks" style="margin:6px 0 0;padding-left:18px">${chk.warnings.map(e=>`<li class="hint">${esc(e)}</li>`).join("")}</ul></details>`:""}
+    ${gaps.length?`<div style="margin-top:10px"><div class="groupttl" style="margin-bottom:4px">Cover suggestions, cheapest first</div>${gaps.slice(0,10).map(gapRow).join("")}</div>`:""}</section>`;
+  const settings=role==="manager"?`<details class="panel"><summary><b>Rotation and public holidays</b></summary><div class="stack" style="margin-top:12px">
+    <div class="settings"><div class="field"><label for="rotaStart">Crew A's first day shift</label><input type="date" id="rotaStart" value="${iso(rotaAnchor)}"></div><p class="hint" style="margin:0;max-width:56ch">Used when a schedule is started or reset from the rotation: 2 days, 2 nights, 2 off, with crews B and C 2 and 4 days later.</p></div>
+    <div><div class="groupttl" style="margin-bottom:8px">Public holidays in ${monthName(m)}</div>${days.filter(isPH).map(d=>`<div class="gaprow"><span><b>${fmtDW(d)}</b> ${esc(HOLIDAYS[iso(d)])}</span><button class="btn sm danger" data-unholiday="${iso(d)}">Remove</button></div>`).join("")||`<p class="hint" style="margin:0 0 8px">None this month.</p>`}
+    <div class="settings" style="margin-top:8px"><div class="field"><label for="phDate">Date</label><input type="date" id="phDate" value="${iso(days[0])}"></div><div class="field"><label for="phName">Holiday name</label><input id="phName" placeholder="For example: Eid al-Fitr"></div><button class="btn sm" id="phAdd">Add holiday</button></div></div>
+  </div></details>`:"";
+  const gk=d=>iso(d)===tdy?" today":"";
+  const gHead=`<tr><th></th>${days.map(d=>`<th class="${iso(d)===tdy?"today":""} ${isWeekend(d)?"we":""} ${isPH(d)?"ph":""}" ${isPH(d)?`title="${esc(HOLIDAYS[iso(d)])}"`:""}>${d.toLocaleDateString(undefined,{weekday:"narrow"})}<br>${d.getDate()}${isPH(d)?"<br>PH":""}</th>`).join("")}<th>Shifts</th><th>Hours</th><th>OT</th></tr>`;
+  const gRow=p=>{const here=days.filter(d=>plantOn(p.id,d)===k),shifts=here.filter(d=>dutyOf(p.id,d)&&!isCoverCode(p.id,d)).length,cov=here.filter(d=>isCoverCode(p.id,d)).length,hrsM=plannedMonth(p.id,m),otM=hrsM-contractMonth(p.id,m);
+    const crewSel=role==="manager"&&p.crew?`<select data-crew="${p.id}" aria-label="Crew for ${esc(p.name)}">${["A","B","C","R"].map(c=>`<option value="${c}" ${c===p.crew?"selected":""}>${c==="R"?"Relief":"Crew "+c}</option>`).join("")}</select>`:"";
+    return `<tr><td class="nm">${esc(p.name)} <small>${p.crew?crewTxt(p.id):designation(p)}</small>${crewSel}</td>${days.map(d=>{if(plantOn(p.id,d)!==k)return `<td><div class="cell" title="At ${esc(PLANTS[plantOn(p.id,d)]||"another site")}" style="opacity:.35">–</div></td>`;const[tx,cl,ti]=gridCell(p.id,d),ov=getOv(p.id,d)!==undefined&&!leaveOn(p.id,d);return `<td><div class="cell ${cl}${gk(d)}" ${ov?'style="outline:2px solid var(--ink);outline-offset:-2px"':""} data-p="${p.id}" data-d="${d.getDate()}" title="${esc(p.name)}, ${fmtDW(d)}: ${esc(ti)}">${tx}</div></td>`}).join("")}<td class="tot">${shifts}${cov?` <span style="color:var(--ot)">+${cov}</span>`:""}</td><td class="tot">${hrs(hrsM/60)}</td><td class="tot" style="color:var(--ot)">${otM>0?hrs(otM/60):""}</td></tr>`};
+  const here=p=>days.some(d=>plantOn(p.id,d)===k),byCrew=(a,b)=>(a.crew==="R")-(b.crew==="R")||a.crew.localeCompare(b.crew);
+  const gSecs=[["General shift",people.filter(p=>here(p)&&!p.crew)],["Plant Technicians",people.filter(p=>here(p)&&p.crew&&p.role==="Plant Technician").sort(byCrew)],["Plant Assistants",people.filter(p=>here(p)&&p.crew&&p.role==="Plant Assistant").sort(byCrew)]];
+  const gCov=t=>`<tr class="cov"><td class="nm">${t==="D"?"Day shift":"Night shift"} cover</td>${days.map(d=>{const s=shiftTeam(k,d,t),n2=(s.head?1:0)+(s.as?1:0),cls=!s.head||(t==="N"&&(!s.as||s.count>2))?"c0":!s.as||s.count>2?"c1":"c2";return `<td><div class="cell ${cls}" title="${!s.head?"No shift head":!s.as?"No assistant":s.count>2?s.count+" on shift":"Shift head and assistant"}">${!s.head?"!":s.count>2?s.count:n2}</div></td>`}).join("")}<td></td><td></td><td></td></tr>`;
+  const gridHtml=`<section class="panel ${edit?"editing":""}" style="padding-top:16px"><h2>${PLANTS[k]}</h2><p class="sub" style="margin:-8px 0 12px">Shift team: 2 days (07:00–19:00), 2 nights (19:00–07:00), 2 off. Each shift: 1 shift head + 1 assistant.</p>
+    <div class="tablewrap" id="dutyWrap" style="margin-top:4px"><table class="roster" id="gridTbl"><thead>${gHead}</thead><tbody>
+    ${gSecs.map(([ti,ps])=>ps.length?`<tr class="rolehd"><td colspan="${days.length+4}">${ti} (${ps.length})</td></tr>${ps.map(gRow).join("")}`:"").join("")}
+    <tr class="rolehd"><td colspan="${days.length+4}">Cover per shift</td></tr>${gCov("D")}${gCov("N")}
+    </tbody></table></div>
+    <div class="legend"><span><i style="background:var(--accent)"></i>D Day shift</span><span><i style="background:var(--ink)"></i>N Night shift</span><span><i style="background:var(--ot)"></i>Cover, overtime</span><span><i style="background:var(--accent-soft);border:1px solid var(--accent)"></i>G Day general</span><span><i style="background:var(--info)"></i>L Leave</span><span><i style="background:var(--warn-soft);border:1px solid var(--warn)"></i>? Leave requested</span><span><i style="background:var(--paper);border:1px solid var(--line)"></i>Off</span><span><i style="background:var(--bad-soft)"></i>Must cover</span><span><i style="background:var(--warn-soft)"></i>Day shift short, allowed</span></div></section>`;
+  const viewSeg=`<div class="seg plants" role="group" aria-label="Roster layout"><button data-rview="grid" aria-pressed="${rosterView==="grid"}">Grid</button><button data-rview="doc" aria-pressed="${rosterView==="doc"}">Duty schedule</button></div>`;
+  return `${head}${nav}
+  <div class="statusbar"><p class="hint" style="margin:0;max-width:70ch">${statusLine}</p><div class="actions">${viewSeg}${actions}<button class="btn sm" id="copyRoster">Copy for Excel</button></div></div>
+  ${palette}
+  ${rosterView==="grid"?gridHtml:`<section class="doc ${edit?"editing":""}">
+    <div class="dochead"><div><div class="plant">${DOC_NAME[k]}</div><div class="ttl">POWER HOUSE DUTY SCHEDULE FOR STAFF - ${monthName(m).toUpperCase()}</div></div><div class="meta">Prepared by: ${meta.by?byId(meta.by).name:"–"}${meta.at?"<br>Date: "+fmtD(parse(meta.at)):""}</div></div>
+    <div class="tablewrap" id="dutyWrap" style="margin:0"><table class="duty" id="dutyTbl">${thead}<tbody>${body}</tbody></table></div>
+    ${legend}
+    <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start"><div class="tablewrap" style="margin:0;padding:0">${hoursTbl}</div><p class="hint" style="margin:0;max-width:44ch">Shift F covering a D/P day stays from 17:00 to 19:00, which is 2 hours of overtime. A night shift that starts the evening before a public holiday earns the holiday rate after midnight.</p></div>
+    <div class="tablewrap" style="margin:0">${daySum}</div>
+  </section>`}
+  ${role!=="staff"?checks:""}
+  ${settings}
+  <textarea id="copyFallback" hidden readonly style="min-height:120px;font-size:12px"></textarea>`;
+}
+let painting=false,dirty=false;
+function bindRoster(){
+  const $=id=>document.getElementById(id),k=rosterPlant,m=rosterMonth,key=rk(k,m);
+  const mv=n=>{rosterMonth=new Date(rosterMonth.getFullYear(),rosterMonth.getMonth()+n,1);genArmed=false;render()};
+  if($("mPrev"))$("mPrev").onclick=()=>mv(-1);
+  if($("mNext"))$("mNext").onclick=()=>mv(1);
+  if($("mNow"))$("mNow").onclick=()=>{rosterMonth=monthStart(today);render()};
+  view.querySelectorAll("[data-rplant]").forEach(b=>b.onclick=()=>{rosterPlant=b.dataset.rplant;render()});
+  const by=role==="pt2"?PT2ME:MGR;
+  if($("startRoster"))$("startRoster").onclick=()=>{rosters[key]={status:"draft",by,at:iso(today)};toast(`${monthName(m)} schedule started from the rotation`);render()};
+  if($("genRoster"))$("genRoster").onclick=()=>{if(!genArmed){genArmed=true;render();return}genArmed=false;delete overrides[key];toast("Schedule reset to the rotation");render()};
+  if($("submitRoster"))$("submitRoster").onclick=()=>{Object.assign(rosters[key],{status:"submitted",submittedAt:iso(today),note:""});brush=null;toast("Submitted to the Plant Manager for approval");render()};
+  if($("approveRoster"))$("approveRoster").onclick=()=>{Object.assign(rosters[key],{status:"approved",approvedBy:MGR,note:""});toast(`${PLANTS[k]} ${monthName(m)} schedule approved and published to staff`);render()};
+  if($("retNote"))$("retNote").oninput=e=>returnNote=e.target.value;
+  if($("returnRoster"))$("returnRoster").onclick=()=>{if(!returnNote.trim()){toast("Add a note saying what needs changing");return}Object.assign(rosters[key],{status:"returned",note:returnNote.trim()});returnNote="";toast("Returned to the Plant Technician II");render()};
+  if($("reopenRoster"))$("reopenRoster").onclick=()=>{Object.assign(rosters[key],{status:"draft",approvedBy:null});toast("Schedule reopened as a draft");render()};
+  view.querySelectorAll("[data-rview]").forEach(b=>b.onclick=()=>{rosterView=b.dataset.rview;render()});
+  view.querySelectorAll("[data-crew]").forEach(s=>s.addEventListener("change",()=>{const p=byId(s.dataset.crew);p.crew=s.value;p.sc=s.value;toast(`${p.name} moved to ${s.value==="R"?"relief":"crew "+s.value}. Days not edited by hand follow the new crew`);render()}));
+  view.querySelectorAll("[data-brush]").forEach(b=>b.onclick=()=>{brush=brush===b.dataset.brush?null:b.dataset.brush;render()});
+  if(canEdit(k,m)){
+    const paint=el=>{if(!brush||!el.dataset.p)return;const p=el.dataset.p,d=new Date(m.getFullYear(),m.getMonth(),+el.dataset.d);if(leaveOn(p,d))return;setOv(p,d,brush==="AUTO"?null:brush);
+      if(el.classList.contains("cell")){const[tx,cl]=gridCell(p,d);el.className=`cell ${cl}`;el.textContent=tx;el.style.outline=getOv(p,d)!==undefined?"2px solid var(--ink)":"";el.style.outlineOffset="-2px"}
+      else{const c=cellCode(p,d),x=CODES[c]||{};el.className=`rc ${x.cls||""} ${getOv(p,d)!==undefined?"ov":""}`;el.innerHTML=codeHtml(c)}
+      dirty=true};
+    view.querySelectorAll("#dutyTbl .rc[data-p], #gridTbl .cell[data-p]").forEach(el=>{
+      el.addEventListener("pointerdown",e=>{if(!brush)return;e.preventDefault();painting=e.pointerType==="mouse";paint(el);if(!painting){dirty=false;render()}});
+      el.addEventListener("pointerenter",()=>{if(painting)paint(el)});
+    });
+  }
+  view.querySelectorAll("[data-assign]").forEach(b=>b.onclick=()=>{const g=window.__gaps[+b.dataset.assign],who=document.getElementById("gap"+b.dataset.assign).value;const rec=bookCover(g.k,g.d,g.t,g.slot,g.forId,who);toast(`${byId(who).name} covers ${shTxt(g.d,g.t)}, ${costTxt(rec.ot)}`);render()});
+  if($("rotaStart"))$("rotaStart").addEventListener("change",e=>{if(!e.target.value)return;rotaAnchor=parse(e.target.value);toast("Rotation updated: crew A starts day shifts "+fmtD(rotaAnchor));render()});
+  view.querySelectorAll("[data-unholiday]").forEach(b=>b.onclick=()=>{delete HOLIDAYS[b.dataset.unholiday];toast("Holiday removed");render()});
+  if($("phAdd"))$("phAdd").onclick=()=>{const d=$("phDate").value,nm=$("phName").value.trim();if(!d||!nm){toast("Enter a date and a name for the holiday");return}HOLIDAYS[d]=nm;toast(`${nm} added on ${fmtD(parse(d))}`);render()};
+  if($("copyRoster"))$("copyRoster").onclick=()=>{
+    const days=monthDays(),lines=[`${DOC_NAME[k]}\tPOWER HOUSE DUTY SCHEDULE FOR STAFF - ${monthName(m).toUpperCase()}`,["#","Emp. No.","Shift","Designation","Name of Employee",...days.map(d=>d.toLocaleDateString(undefined,{weekday:"short"})+" "+String(d.getDate()).padStart(2,"0")),...SUM_HEAD].join("\t")];
+    let n=0;scheduleRows(k).forEach(([title,ps])=>{if(!ps.length)return;lines.push(title);ps.forEach(p=>{n++;lines.push([n,p.emp,p.sc,designation(p),p.name,...days.map(d=>plantOn(p.id,d)===k?cellCode(p.id,d):""),...personSummary(p,days,k)].join("\t"))})});
+    lines.push("");const allP=scheduleRows(k).flatMap(g=>g[1]);
+    lines.push(["","","","Work Days Total","Site Location",...days.map(d=>String(d.getDate()).padStart(2,"0"))].join("\t"));
+    DAY_ROWS.forEach(([name,f])=>{const per=days.map(d=>allP.filter(p=>plantOn(p.id,d)===k&&f(CODES[cellCode(p.id,d)]||{})).length);lines.push(["","","",per.reduce((a,b)=>a+b,0),name,...per].join("\t"))});
+    const txt=lines.join("\n"),fb=$("copyFallback");
+    const fallback=()=>{fb.value=txt;fb.hidden=false;fb.focus();fb.select();toast("Copy the selected text, then paste it into Excel")};
+    try{navigator.clipboard.writeText(txt).then(()=>toast("Schedule copied. Paste it into Excel or Google Sheets"),fallback)}catch(e){fallback()}
+  };
+}
+window.addEventListener("pointerup",()=>{if(painting){painting=false;if(dirty){dirty=false;render()}}});
+
+/* ---------- Approvals ---------- */
+function coverPlanHtml(l){
+  const p=byId(l.who);
+  if(p.shift==="sft"&&p.crew!=="R"){
+    const plan=planCover(l,false);if(!plan.length)return `<span class="note">No rostered shifts</span>`;
+    const total=plan.reduce((s,x)=>s+(x.ot||0),0);
+    return plan.map(x=>x.skipped?`<div class="note">${shTxt(x.d,x.t)}: no cover, day shift runs one short${x.saved?` (saves ${H(x.saved)})`:""}</div>`:x.by?`<div class="note">${shTxt(x.d,x.t)}: <b style="color:var(--ink)">${byId(x.by).name}</b>, ${howTxt(x.by,x.mode)}, ${costTxt(x.ot,isPH(x.d))}</div>`:`<div>${pill(`Nobody free for ${shTxt(x.d,x.t)}`,"p-bad")}</div>`).join("")+`<div style="margin-top:4px"><b>${total?H(total)+" overtime in total":"No overtime"}</b></div>`;
+  }
+  if(p.role==="Plant Technician 2") return `<span class="note">Can't cover shift heads at ${PLANTS[p.plant].replace(" HPP","")} while away</span>`;
+  if(p.crew==="R") return `<span class="note">Relief, no shift to cover</span>`;
+  const others=leave.filter(x=>x.id!==l.id&&x.status==="approved"&&x.who!==l.who&&(!byId(x.who).plant||!p.plant||byId(x.who).plant===p.plant)&&!(l.to<x.from||l.from>x.to)).map(x=>first(x.who));
+  return others.length?pill(others.join(", ")+" also off","p-warn"):`<span class="note">No overlap</span>`;
+}
+function vApprovals(){
+  const pl=leave.filter(l=>l.status==="pending"&&l.who!==MGR&&inPlant(l.who)).sort((a,b)=>a.from.localeCompare(b.from));
+  const po=ot.filter(o=>o.status==="pending"&&o.who!==MGR&&inPlant(o.who)).sort((a,b)=>a.month.localeCompare(b.month));
+  const pr=Object.entries(rosters).filter(([,r])=>r.status==="submitted");
+  const shown=pl.length+po.length+pr.length;
+  const act=(kind,id,label="Approve")=>`<div class="actions"><button class="btn sm primary" data-approve="${kind}|${id}">${label}</button><button class="btn sm danger" data-decline="${kind}|${id}">Decline</button></div>`;
+  const whoCell=id=>`<b>${byId(id).name}</b><div class="note">${designation(byId(id))}${crewTxt(id)?", "+crewTxt(id):""}. ${siteOf(id)}</div>`;
+  return `
+  <div class="head"><div><h1>Approvals</h1><p class="sub">${shown?`${shown} item${shown>1?"s":""} need${shown===1?"s":""} a decision`:"Nothing waiting here"}</p></div><span class="example">Shared-staff requests are examples</span></div>
+  ${pr.length?`<section class="panel"><h2>Duty schedules</h2>${pr.map(([key,r])=>{const[pk,mk]=key.split("|");return `<div class="gaprow"><div><b>${PLANTS[pk]}, ${monthName(parse(mk+"-01"))}</b><div class="note">Submitted by ${byId(r.by).name}${r.submittedAt?" on "+fmtD(parse(r.submittedAt)):""}</div></div><button class="btn sm primary" data-review="${pk}|${mk}">Review schedule</button></div>`}).join("")}</section>`:""}
+  ${plantSeg()}
+  <section class="panel"><h2>Leave requests</h2><p class="hint" style="margin:-6px 0 10px">Approving books the suggested cover on the duty schedule. You can change who covers on the roster.</p><div class="tablewrap"><table><thead><tr><th>Person</th><th>Request</th><th>Shifts</th><th>Planned cover</th><th></th></tr></thead><tbody>
+  ${pl.map(l=>`<tr><td>${whoCell(l.who)}</td><td>${LEAVE_TYPES[l.type].name}<div class="note">${datesTxt(l)}${l.reason?". "+esc(l.reason):""}</div></td><td>${leaveDays(l)}</td><td>${coverPlanHtml(l)}</td><td>${act("leave",l.id,byId(l.who).shift==="sft"&&byId(l.who).crew!=="R"?"Approve and book cover":"Approve")}</td></tr>`).join("")||`<tr><td colspan="5" class="empty">No leave requests waiting</td></tr>`}
+  </tbody></table></div></section>
+  <section class="panel"><h2>Overtime claims</h2><div class="tablewrap"><table><thead><tr><th>Person</th><th>Month</th><th>Hours</th><th>Paid as</th><th></th></tr></thead><tbody>
+  ${po.map(o=>{const m=parse(o.month+"-01"),pl=plannedMonth(o.who,m),c=contractMonth(o.who,m);return `<tr><td>${whoCell(o.who)}</td><td>${monthName(m)}<div class="note">${esc(o.reason)}. Rostered ${H(pl)} of ${H(c)} contract</div></td><td>${hrs(o.hours)}h overtime${o.ph?`<div class="note">+ ${hrs(o.ph)}h public holiday</div>`:""}</td><td>${hrs(o.hours*OT_RATE+(o.ph||0)*PH_RATE)}h <span class="note">${OT_RATE}× and ${PH_RATE}×</span></td><td>${act("ot",o.id)}</td></tr>`}).join("")||`<tr><td colspan="5" class="empty">No overtime claims waiting</td></tr>`}
+  </tbody></table></div></section>`;
+}
+function bindApprovals(){
+  const go=(v,status)=>{const[k,id]=v.split("|");const r=(k==="leave"?leave:ot).find(x=>x.id===id);r.status=status;
+    let msg=`${status==="approved"?"Approved":"Declined"} ${first(r.who)}'s ${k==="leave"?"leave":"overtime"}`;
+    if(k==="leave"&&status==="approved"){const plan=planCover(r,true);const booked=plan.filter(x=>x.by),miss=plan.filter(x=>!x.by&&!x.skipped).length,tot=booked.reduce((s,x)=>s+(x.ot||0),0);if(plan.length)msg+=miss?`. ${miss} shift${miss>1?"s":""} still need cover on the roster`:booked.length?`. Cover booked, ${costTxt(tot)}`:`. No cover needed`}
+    toast(msg);render()};
+  view.querySelectorAll("[data-approve]").forEach(b=>b.onclick=()=>go(b.dataset.approve,"approved"));
+  view.querySelectorAll("[data-decline]").forEach(b=>b.onclick=()=>go(b.dataset.decline,"declined"));
+  view.querySelectorAll("[data-review]").forEach(b=>b.onclick=()=>{const[pk,mk]=b.dataset.review.split("|");rosterPlant=pk;rosterMonth=parse(mk+"-01");location.hash="roster"});
+}
+
+/* ---------- Render ---------- */
+const R={today:[vToday,bindToday],timesheet:[vTimesheet],leave:[vLeave,bindLeave],overtime:[vOvertime,bindOvertime],roster:[vRoster,bindRoster],team:[vTeam,bindTeam],approvals:[vApprovals,bindApprovals]};
+let lastView=null;
+function render(){
+  const w=document.getElementById("dutyWrap"),sl=w?w.scrollLeft:0,sy=window.scrollY;
+  clearInterval(tick);const k=current();renderNav();view.innerHTML=R[k][0]();if(R[k][1])R[k][1]();
+  if(k===lastView&&k==="roster"){const w2=document.getElementById("dutyWrap");if(w2)w2.scrollLeft=sl;window.scrollTo(0,sy)}
+  lastView=k;
+  view.querySelectorAll("[data-plant]").forEach(b=>b.onclick=()=>{plantFilter=b.dataset.plant;render()});
+}
+let tt;function toast(m){const t=document.getElementById("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,3200)}
+document.querySelectorAll(".seg button[data-role]").forEach(b=>b.onclick=()=>{role=b.dataset.role;brush=null;genArmed=false;document.querySelectorAll(".seg button[data-role]").forEach(x=>x.setAttribute("aria-pressed",x===b));
+  if(role==="pt2"){plantFilter=byId(PT2ME).plant;rosterPlant=plantFilter}else plantFilter="all";
+  location.hash=homeOf[role];render()});
+window.addEventListener("hashchange",render);
+render();
+})();
+</script>
+
+</body>
+</html>

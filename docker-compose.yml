@@ -1,0 +1,82 @@
+# Shiftbook on one DigitalOcean droplet.
+#   docker compose up -d                     app + database + daily backups
+#   docker compose --profile tunnel up -d    also runs a Cloudflare Tunnel (no open ports needed)
+name: shiftbook
+
+services:
+  db:
+    image: postgres:16.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shiftbook
+      POSTGRES_USER: shiftbook_owner
+      POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD:?Set DB_OWNER_PASSWORD in .env}
+      TZ: Africa/Kampala
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shiftbook_owner -d shiftbook"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [internal]          # the database is never reachable from outside
+
+  app:
+    build: .
+    image: shiftbook-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_ADMIN_URL: postgres://shiftbook_owner:${DB_OWNER_PASSWORD}@db:5432/shiftbook
+      DATABASE_URL: postgres://shiftbook_api:${API_DB_PASSWORD:?Set API_DB_PASSWORD in .env}@db:5432/shiftbook
+      API_DB_PASSWORD: ${API_DB_PASSWORD}
+      APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN in .env, e.g. https://shiftbook.example.com}
+      PHOTO_DIR: /data/photos
+    volumes:
+      - photos:/data/photos
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"   # only this server can reach it; Cloudflare or your proxy sits in front
+    networks: [internal, web]
+
+  backup:
+    image: postgres:16.4-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DB_OWNER_PASSWORD}
+      TZ: Africa/Kampala
+    volumes:
+      - ./backups:/backups
+      - photos:/photos:ro
+    # Every day: database dump plus clock-in photos; keeps 14 days.
+    entrypoint: >
+      sh -c 'while true; do
+        d=$$(date +%F);
+        pg_dump -h db -U shiftbook_owner -Fc shiftbook > /backups/shiftbook-$$d.dump &&
+        tar -czf /backups/photos-$$d.tar.gz -C /photos . &&
+        find /backups -type f -mtime +14 -delete;
+        sleep 86400; done'
+    networks: [internal]
+
+  tunnel:
+    image: cloudflare/cloudflared:2024.10.1
+    profiles: [tunnel]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on: [app]
+    networks: [web]
+
+volumes:
+  db-data:
+  photos:
+
+networks:
+  internal:
+    internal: true
+  web:

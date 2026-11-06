@@ -1,0 +1,24 @@
+{
+  "name": "shiftbook-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types --no-warnings src/migrate.ts && node --experimental-strip-types --no-warnings src/server.ts",
+    "migrate": "node --experimental-strip-types --no-warnings src/migrate.ts",
+    "test": "node --experimental-strip-types --no-warnings --test --test-concurrency=1 src/*.test.ts ../shared/*.test.ts"
+  },
+  "dependencies": {
+    "@fastify/cookie": "9.4.0",
+    "@fastify/rate-limit": "9.1.0",
+    "@fastify/static": "7.0.4",
+    "@simplewebauthn/server": "10.0.1",
+    "fastify": "4.28.1",
+    "pg": "8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "@types/pg": "8.11.10",
+    "typescript": "5.6.3"
+  },
+  "engines": { "node": ">=22.6" }
+}

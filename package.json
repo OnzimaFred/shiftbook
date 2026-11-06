@@ -1,0 +1,12 @@
+{
+  "name": "shiftbook",
+  "private": true,
+  "description": "Attendance, leave, overtime and monthly duty roster for Nyamwamba 1 and 2 HPP",
+  "type": "module",
+  "scripts": {
+    "test": "cd api && npm test",
+    "test:db": "bash db/tests/run.sh",
+    "up": "docker compose --profile tunnel up -d --build",
+    "logs": "docker compose logs -f app"
+  }
+}
